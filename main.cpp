@@ -79,6 +79,8 @@ bool isStateValid(const oc::SpaceInformation* si, const ob::State* state)
     const auto* se3state = state->as<ob::SE3StateSpace::StateType>();
     const auto* pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
     const auto* rot = se3state->as<ob::SO3StateSpace::StateType>(1);
+    fcl::Translation3f translation(pos->values[0], pos->values[1], pos->values[2]);
+    fcl::Quaternionf rotation(rot->x, rot->y, rot->z, rot->w);
     std::cout << "x = " << rot->x << ", y = " << rot->y << ", z = " << rot->z << ", w = " << rot->w << std::endl;
     // return a value that is always true but uses the two variables we define, so we avoid compiler warnings
     // TODO: Implement collision checking
