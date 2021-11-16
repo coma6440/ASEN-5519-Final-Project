@@ -81,9 +81,12 @@ bool isStateValid(const oc::SpaceInformation* si, const ob::State* state)
     const auto* rot = se3state->as<ob::SO3StateSpace::StateType>(1);
     fcl::Translation3f translation(pos->values[0], pos->values[1], pos->values[2]);
     fcl::Quaternionf rotation(rot->x, rot->y, rot->z, rot->w);
-    std::cout << "x = " << rot->x << ", y = " << rot->y << ", z = " << rot->z << ", w = " << rot->w << std::endl;
-    // return a value that is always true but uses the two variables we define, so we avoid compiler warnings
+    fcl::CollisionRequestf requestType(1, false, 1, false);
+    fcl::CollisionResultf collisionResult;
     // TODO: Implement collision checking
+    // fcl::collide(robot, obstacle, requestType, collisionResult);
+    // return !collisionResult.isCollision() && si->satisfiesBounds(state)
+    // return a value that is always true but uses the two variables we define, so we avoid compiler warnings
     return si->satisfiesBounds(state) && (const void*)rot != (const void*)pos;
     }
 
