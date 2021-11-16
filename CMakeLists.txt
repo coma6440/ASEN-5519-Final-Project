@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.0)
-project(Test VERSION 0.1.0)
+project(FinalProject VERSION 0.1.0)
 
 find_package(ompl REQUIRED)
 find_package(fcl REQUIRED)
@@ -20,9 +20,9 @@ include_directories(
 include(CTest)
 enable_testing()
 
-add_executable(Test main.cpp)
+add_executable(FinalProject main.cpp)
 
-target_link_libraries(Test
+target_link_libraries(FinalProject
 	${OMPL_LIBRARIES}
 	${FCL_LIBRARIES}
 )
