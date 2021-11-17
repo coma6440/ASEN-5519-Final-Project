@@ -3,14 +3,6 @@ project(FinalProject VERSION 0.1.0)
 
 find_package(ompl REQUIRED)
 find_package(fcl REQUIRED)
-# message(STATUS "OMPL_FOUND: ${OMPL_FOUND}")
-# message(STATUS "OMPL_INCLUDE_DIRS: ${OMPL_INCLUDE_DIRS}")
-# message(STATUS "OMPL_LIBRARIES: ${OMPL_LIBRARIES}")
-# message(STATUS "OMPLAPP_LIBRARIES: ${OMPLAPP_LIBRARIES}")
-# message(STATUS "OMPL_VERSION: ${OMPL_VERSION}")
-
-# find_package(Boost REQUIRED COMPONENTS serialization)
-# message(STATUS "BOOST_LIBRARIES: ${Boost_LIBRARIES}")
 
 include_directories(
 	${OMPL_INCLUDE_DIRS}

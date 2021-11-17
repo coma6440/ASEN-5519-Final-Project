@@ -1,39 +1,3 @@
-/*********************************************************************
-* Software License Agreement (BSD License)
-*
-*  Copyright (c) 2012, Rice University
-*  All rights reserved.
-*
-*  Redistribution and use in source and binary forms, with or without
-*  modification, are permitted provided that the following conditions
-*  are met:
-*
-*   * Redistributions of source code must retain the above copyright
-*     notice, this list of conditions and the following disclaimer.
-*   * Redistributions in binary form must reproduce the above
-*     copyright notice, this list of conditions and the following
-*     disclaimer in the documentation and/or other materials provided
-*     with the distribution.
-*   * Neither the name of the Rice University nor the names of its
-*     contributors may be used to endorse or promote products derived
-*     from this software without specific prior written permission.
-*
-*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-*  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-*  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-*  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-*  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-*  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-*  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-*  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-*  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-*  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
-*  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-*  POSSIBILITY OF SUCH DAMAGE.
-*********************************************************************/
-
-/* Author: Ryan Luna */
-
 /* Standard Libraries */
 #include <iostream>
 #include <valarray>
@@ -41,8 +5,8 @@
 #include <fstream>
 
 /* OMPL */
-#include <ompl/control/SpaceInformation.h>
 #include <ompl/base/SpaceInformation.h>
+#include <ompl/control/SpaceInformation.h>
 #include <ompl/base/spaces/SE3StateSpace.h>
 #include <ompl/control/ODESolver.h>
 #include <ompl/control/spaces/RealVectorControlSpace.h>
@@ -59,7 +23,6 @@ namespace oc = ompl::control;
 namespace og = ompl::geometric;
 
 /* Global Variables and Constants */
-
 // Definition of single robot and obstacle, should remove global definition eventually
 const std::shared_ptr<fcl::CollisionGeometryf> robot_body(new fcl::Boxf(2.0, 1.0, 1.0));
 const std::shared_ptr<fcl::CollisionGeometryf> obstacle_body(new fcl::Boxf(5.0, 5.0, 5.0));
@@ -67,6 +30,22 @@ const fcl::CollisionObjectf robot_body_object(robot_body, fcl::Transform3f());
 const fcl::CollisionObjectf obstacle_body_object(obstacle_body, fcl::Transform3f());
 const auto robot_collision_object = std::make_shared<fcl::CollisionObjectf>(robot_body_object);
 const auto obstacle_collision_object = std::make_shared<fcl::CollisionObjectf>(obstacle_body_object);
+
+auto CollisionBox(float l, float h, float w)
+    {
+    std::shared_ptr<fcl::CollisionGeometryf> geometry(new fcl::Boxf(l, w, h));
+    fcl::CollisionObjectf collision_object(geometry, fcl::Transform3f());
+    return std::make_shared<fcl::CollisionObjectf>(collision_object);
+    }
+
+auto CollisionBox(float l, float h, float w, fcl::Vector3f translation, fcl::Quaternionf rotation)
+    {
+    std::shared_ptr<fcl::CollisionGeometryf> geometry(new fcl::Boxf(l, w, h));
+    fcl::CollisionObjectf collision_object(geometry, fcl::Transform3f());
+    auto obj = std::make_shared<fcl::CollisionObjectf>(collision_object);
+    obj->setTransform(rotation, translation);
+    return obj;
+    }
 
 // Definition of the ODE for the kinematic car.
 void DynamicsODE(const oc::ODESolver::StateType& q, const oc::Control* control, oc::ODESolver::StateType& qdot)
@@ -213,7 +192,7 @@ void planWithSimpleSetup()
 
 int main(int /*argc*/, char** /*argv*/)
     {
-
+    //const auto box = CollisionBox(2.0, 1.0, 1.0);
     planWithSimpleSetup();
 
     return 0;
