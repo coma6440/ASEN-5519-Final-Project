@@ -108,9 +108,7 @@ void planWithSimpleSetup()
     {
     // TODO: Create easy switch between geometric and kinodynamic planning 
     // Obstacle setup
-    fcl::Vector3f obs_translation(5.0, 0.0, 0.0);
-    fcl::Quaternionf obs_rotation(0, 0, 0, 1);
-    obstacle_collision_object->setTransform(obs_rotation, obs_translation);
+
 
     // State space setup
     auto space(std::make_shared<ob::SE3StateSpace>());
@@ -192,6 +190,9 @@ void planWithSimpleSetup()
 
 int main(int /*argc*/, char** /*argv*/)
     {
+    fcl::Vector3f obs_translation(5.0, 0.0, 0.0);
+    fcl::Quaternionf obs_rotation(0, 0, 0, 1);
+    obstacle_collision_object->setTransform(obs_rotation, obs_translation);
     //const auto box = CollisionBox(2.0, 1.0, 1.0);
     planWithSimpleSetup();
 
