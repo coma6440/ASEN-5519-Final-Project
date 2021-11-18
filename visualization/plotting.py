@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-from matplotlib import animation, rc
+from matplotlib.animation import FuncAnimation
 
 # Taken from https://stackoverflow.com/questions/49277753/python-matplotlib-plotting-cuboids
 def cuboid_data2(o, size=(1, 1, 1)):
@@ -57,22 +57,20 @@ ax.set_zlim(-10, 10)
 
 def init():
     # Plot the surface.
-    ax.plot3D(p.pos[:, 0], p.pos[:, 1], p.pos[:, 2], color="blue")
+    ax.plot3D(p.pos[:, 0], p.pos[:, 1], p.pos[:, 2], color="black")
     return (fig,)
 
 
 def animate(i):
     # azimuth angle : 0 deg to 360 deg
-    ax.view_init(elev=10, azim=i * 4)
+    ax.view_init(elev=10, azim=i * 1)
     return (fig,)
 
 
 # Animate
-ani = animation.FuncAnimation(
-    fig, animate, init_func=init, frames=90, interval=50, blit=True
-)
+ani = FuncAnimation(fig, animate, init_func=init, frames=500, interval=20, blit=True)
 fn = "visualization/test"
 # # ani.save(fn+'.mp4',writer='ffmpeg',fps=1000/50)
-ani.save(fn + ".gif", writer="pillow", fps=1000 / 50)
+ani.save(fn + ".gif", writer="pillow", fps=1000 / 20)
 # plt.rcParams['animation.html'] = 'html5'
 # ani
