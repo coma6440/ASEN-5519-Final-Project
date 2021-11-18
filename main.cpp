@@ -176,11 +176,12 @@ void planWithSimpleSetup()
 
     // Solve the planning problem
     ob::PlannerStatus solved = ss.solve(solve_time);
+    // ss.simplifySolution();
 
     if (solved)
         {
         std::cout << "Found solution!" << std::endl;
-        std::ofstream file("../solution.txt");
+        std::ofstream file("../solutions/solution.txt");
         ss.getSolutionPath().printAsMatrix(file);
         file.close();
         }

@@ -3,4 +3,8 @@
 - Need to install fcl https://github.com/flexible-collision-library/fcl
 
 ## Results
-![til](./visualization/test.gif)
+Below is a visualization of trajectory found using a geometric planner without path smoothing:
+![til](./visualization/solution.gif)
+
+And with path smoothing:
+![til](./visualization/solution_simplified.gif)

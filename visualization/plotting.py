@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from matplotlib.animation import FuncAnimation
+from os import listdir
+from os.path import isfile, join
 
 # Taken from https://stackoverflow.com/questions/49277753/python-matplotlib-plotting-cuboids
 def cuboid_data2(o, size=(1, 1, 1)):
@@ -44,33 +46,33 @@ class SolutionPath:
 obs_pos = [(5, 0, 0)]
 obs_size = [(5, 5, 5)]
 
-p = SolutionPath("solution.txt")
+files = [f for f in listdir("solutions") if isfile(join("solutions", f))]
+for fname in files:
+    p = SolutionPath("solutions/" + fname)
 
-fig = plt.figure()
-ax = plt.axes(projection="3d")
-pc = plotCubeAt2(obs_pos, obs_size, color="crimson", edgecolor="k")
-ax.add_collection3d(pc)
-ax.set_xlim(0, 15)
-ax.set_ylim(-10, 10)
-ax.set_zlim(-10, 10)
+    fig = plt.figure()
+    ax = plt.axes(projection="3d")
+    pc = plotCubeAt2(obs_pos, obs_size, color="crimson", edgecolor="k")
+    ax.add_collection3d(pc)
+    ax.set_xlim(0, 15)
+    ax.set_ylim(-10, 10)
+    ax.set_zlim(-10, 10)
 
+    def init():
+        # Plot the surface.
+        ax.plot3D(p.pos[:, 0], p.pos[:, 1], p.pos[:, 2], color="black")
+        return (fig,)
 
-def init():
-    # Plot the surface.
-    ax.plot3D(p.pos[:, 0], p.pos[:, 1], p.pos[:, 2], color="black")
-    return (fig,)
+    def animate(i):
+        # azimuth angle : 0 deg to 360 deg
+        ax.view_init(elev=10, azim=i * 1)
+        return (fig,)
 
+    # Animate
+    ani = FuncAnimation(
+        fig, animate, init_func=init, frames=600, interval=20, blit=True
+    )
 
-def animate(i):
-    # azimuth angle : 0 deg to 360 deg
-    ax.view_init(elev=10, azim=i * 1)
-    return (fig,)
-
-
-# Animate
-ani = FuncAnimation(fig, animate, init_func=init, frames=600, interval=20, blit=True)
-fn = "visualization/test"
-# # ani.save(fn+'.mp4',writer='ffmpeg',fps=1000/50)
-ani.save(fn + ".gif", writer="pillow", fps=1000 / 20)
-# plt.rcParams['animation.html'] = 'html5'
-# ani
+    ani.save(
+        "visualization/" + fname.split(".")[0] + ".gif", writer="pillow", fps=1000 / 20
+    )
