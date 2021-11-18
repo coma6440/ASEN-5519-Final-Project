@@ -68,7 +68,7 @@ def animate(i):
 
 
 # Animate
-ani = FuncAnimation(fig, animate, init_func=init, frames=500, interval=20, blit=True)
+ani = FuncAnimation(fig, animate, init_func=init, frames=600, interval=20, blit=True)
 fn = "visualization/test"
 # # ani.save(fn+'.mp4',writer='ffmpeg',fps=1000/50)
 ani.save(fn + ".gif", writer="pillow", fps=1000 / 20)
