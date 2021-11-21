@@ -60,31 +60,26 @@ class SolutionAnimator:
     def get_path_info(self, idx):
         return self.pos[idx, :], self.rot[idx, :]
 
+    def SolutionAnimate(self):
+        fig, (ax1, ax2) = plt.subplots(1, 2)
+
     def AzimuthAnimate(self):
         fig = plt.figure()
         ax = plt.axes(projection="3d")
         self.obs.plot(ax, "red")
+        ax.plot3D(
+            self.pos[:, 0], self.pos[:, 1], self.pos[:, 2], color="black",
+        )
         ax.set_xlim([0, 15])
         ax.set_ylim([-10, 10])
         ax.set_zlim([-10, 10])
-
-        def init():
-            # Plot the path
-            ax.plot3D(
-                self.pos[:, 0], self.pos[:, 1], self.pos[:, 2], color="black",
-            )
-            return (fig,)
 
         def animate(i):
             # azimuth angle : 0 deg to 360 deg
             ax.view_init(elev=10, azim=i * 1)
             return (fig,)
 
-        # Animate
-        ani = FuncAnimation(
-            fig, animate, init_func=init, frames=600, interval=20, blit=True
-        )
-
+        ani = FuncAnimation(fig, animate, frames=600, interval=20, blit=True)
         ani.save(
             self.out_folder + self.fname.split(".")[0] + ".gif",
             writer="pillow",
