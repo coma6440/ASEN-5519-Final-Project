@@ -1,78 +1,102 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from matplotlib.animation import FuncAnimation
 from os import listdir
 from os.path import isfile, join
-
-# Taken from https://stackoverflow.com/questions/49277753/python-matplotlib-plotting-cuboids
-def cuboid_data2(o, size=(1, 1, 1)):
-    X = [
-        [[0, 1, 0], [0, 0, 0], [1, 0, 0], [1, 1, 0]],
-        [[0, 0, 0], [0, 0, 1], [1, 0, 1], [1, 0, 0]],
-        [[1, 0, 1], [1, 0, 0], [1, 1, 0], [1, 1, 1]],
-        [[0, 0, 1], [0, 0, 0], [0, 1, 0], [0, 1, 1]],
-        [[0, 1, 0], [0, 1, 1], [1, 1, 1], [1, 1, 0]],
-        [[0, 1, 1], [0, 0, 1], [1, 0, 1], [1, 1, 1]],
-    ]
-    X = np.array(X).astype(float)
-    for i in range(3):
-        X[:, :, i] *= size[i]
-    X += np.array(o)
-    return X
+from scipy.spatial import ConvexHull
+from scipy.spatial.transform import Rotation as R
 
 
-def plotCubeAt2(positions, sizes=None, colors=None, **kwargs):
-    if not isinstance(colors, (list, np.ndarray)):
-        colors = ["C0"] * len(positions)
-    if not isinstance(sizes, (list, np.ndarray)):
-        sizes = [(1, 1, 1)] * len(positions)
-    g = []
-    for p, s, c in zip(positions, sizes, colors):
-        g.append(cuboid_data2(p, size=s))
-    return Poly3DCollection(
-        np.concatenate(g), facecolors=np.repeat(colors, 6), **kwargs
-    )
+class Cuboid:
+    def __init__(self, position, size, orientation):
+        self.x = position[0]
+        self.y = position[1]
+        self.z = position[2]
+        self.l = size[0]
+        self.w = size[1]
+        self.h = size[2]
+        self.pts = np.array(
+            [
+                [-self.l / 2, -self.w / 2, -self.h / 2],
+                [-self.l / 2, -self.w / 2, +self.h / 2],
+                [-self.l / 2, +self.w / 2, -self.h / 2],
+                [-self.l / 2, +self.w / 2, +self.h / 2],
+                [+self.l / 2, -self.w / 2, -self.h / 2],
+                [+self.l / 2, -self.w / 2, +self.h / 2],
+                [+self.l / 2, +self.w / 2, -self.h / 2],
+                [+self.l / 2, +self.w / 2, +self.h / 2],
+            ]
+        )
+        self.trnsfm_pts = []
+        self.transform(position, orientation)
+        self.hull = ConvexHull(self.pts)
+
+    def transform(self, pt, q):
+        r = R.from_quat(q)
+        self.trnsfm_pts = r.apply(self.pts) + pt
+
+    def plot(self, ax, c):
+        ax.plot_trisurf(
+            self.trnsfm_pts[:, 0],
+            self.trnsfm_pts[:, 1],
+            self.trnsfm_pts[:, 2],
+            triangles=self.hull.simplices,
+            shade=False,
+            edgecolor="k",
+            color=c,
+        )
 
 
-class SolutionPath:
-    def __init__(self, fname):
-        print(fname)
-        data = np.genfromtxt(fname, delimiter=" ")
+class SolutionAnimator:
+    def __init__(self, obs, robot, fname, infolder, outfolder):
+        self.out_folder = outfolder
+        self.fname = fname
+        self.obs = obs
+        self.robot = robot
+        data = np.genfromtxt(infolder + fname, delimiter=" ")
         self.pos = data[:, 0:3]
         self.rot = data[:, 3:8]
 
+    def get_path_info(self, idx):
+        return self.pos[idx, :], self.rot[idx, :]
 
-obs_pos = [(5, 0, 0)]
-obs_size = [(5, 5, 5)]
+    def AzimuthAnimate(self):
+        fig = plt.figure()
+        ax = plt.axes(projection="3d")
+        self.obs.plot(ax, "red")
+        ax.set_xlim([0, 15])
+        ax.set_ylim([-10, 10])
+        ax.set_zlim([-10, 10])
+
+        def init():
+            # Plot the path
+            ax.plot3D(
+                self.pos[:, 0], self.pos[:, 1], self.pos[:, 2], color="black",
+            )
+            return (fig,)
+
+        def animate(i):
+            # azimuth angle : 0 deg to 360 deg
+            ax.view_init(elev=10, azim=i * 1)
+            return (fig,)
+
+        # Animate
+        ani = FuncAnimation(
+            fig, animate, init_func=init, frames=600, interval=20, blit=True
+        )
+
+        ani.save(
+            self.out_folder + self.fname.split(".")[0] + ".gif",
+            writer="pillow",
+            fps=1000 / 20,
+        )
+
+
+obs = Cuboid(np.array([5, 0, 0]), np.array([5, 5, 5]), np.array([0, 0, 0, 1]))
+robot = Cuboid(np.array([0, 0, 0]), np.array([2, 1, 1]), np.array([0, 0, 0, 1]))
 
 files = [f for f in listdir("solutions") if isfile(join("solutions", f))]
 for fname in files:
-    p = SolutionPath("solutions/" + fname)
-
-    fig = plt.figure()
-    ax = plt.axes(projection="3d")
-    pc = plotCubeAt2(obs_pos, obs_size, color="crimson", edgecolor="k")
-    ax.add_collection3d(pc)
-    ax.set_xlim(0, 15)
-    ax.set_ylim(-10, 10)
-    ax.set_zlim(-10, 10)
-
-    def init():
-        # Plot the surface.
-        ax.plot3D(p.pos[:, 0], p.pos[:, 1], p.pos[:, 2], color="black")
-        return (fig,)
-
-    def animate(i):
-        # azimuth angle : 0 deg to 360 deg
-        ax.view_init(elev=10, azim=i * 1)
-        return (fig,)
-
-    # Animate
-    ani = FuncAnimation(
-        fig, animate, init_func=init, frames=600, interval=20, blit=True
-    )
-
-    ani.save(
-        "visualization/" + fname.split(".")[0] + ".gif", writer="pillow", fps=1000 / 20
-    )
+    print(f"Working on {fname}...")
+    SA = SolutionAnimator(obs, robot, fname, "solutions/", "visualization/")
+    SA.AzimuthAnimate()
