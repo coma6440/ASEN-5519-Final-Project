@@ -97,6 +97,10 @@ class SolutionAnimator:
 
         # Create the plots
         fig, (ax1, ax2) = plt.subplots(1, 2, subplot_kw={"projection": "3d"})
+        fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
+        # fig = plt.figure(figsize=(8, 5))
+        # ax1 = fig.add_subplot(121, projection="3d")
+        # ax2 = fig.add_subplot(122)
 
         # Add obstacles
         self.obs.plot(ax1, "red", 0.3)
