@@ -9,9 +9,6 @@ include_directories(
 	${FCL_INCLUDE_DIRS}
 )
 
-include(CTest)
-enable_testing()
-
 add_executable(FinalProject main.cpp)
 
 target_link_libraries(FinalProject
