@@ -53,22 +53,20 @@ void DynamicsODE(const oc::ODESolver::StateType& x, const oc::Control* control, 
     {
     // TODO: Update to get proper dynamics, use quaternion math if possible
     const double* u = control->as<oc::RealVectorControlSpace::ControlType>()->values;
-    const Eigen::Quaternionf orientation(x[3], x[4], x[5], x[6]);
-    // std::cout << x[7] << ", " << u[0] << std::endl;
+    const Eigen::Quaternionf orientation(x[6], x[3], x[4], x[5]);
+    const Eigen::Quaternionf ang_vel(0, u[1], u[2], u[3]);
     const Eigen::Vector3f body_velocity(x[7], 0, 0);
-    const Eigen::Vector3f vel = -(orientation * body_velocity);
-    // std::cout << vel << std::endl;
+    const Eigen::Vector3f vel = orientation * body_velocity;
+    const Eigen::Quaternionf qdot = ang_vel * orientation;
     // Zero out qdot
     xdot.resize(x.size(), 0);
-    //xdot[0] = 1;
-    // Something wrong with velocity, needs to be negative in order to find solution? 
     xdot[0] = vel[0]; // X Velocity
     xdot[1] = vel[1]; // Y Velocity
     xdot[2] = vel[2]; // Z Velocity
-    xdot[3] = 0.5 * (u[1] * x[6] + u[2] * x[5] - u[3] * x[4]); // q_dot x
-    xdot[4] = 0.5 * (u[2] * x[6] + u[3] * x[3] - u[1] * x[5]); // q_dot y
-    xdot[5] = 0.5 * (u[3] * x[6] + u[1] * x[4] - u[2] * x[3]); // q_dot z
-    xdot[6] = -0.5 * (u[1] * x[3] + u[2] * x[4] + u[3] * x[5]); // q_dot w
+    xdot[3] = 0.5 * qdot.x(); // q_dot x
+    xdot[4] = 0.5 * qdot.y(); // q_dot y
+    xdot[5] = 0.5 * qdot.z(); // q_dot z
+    xdot[6] = 0.5 * qdot.w(); // q_dot w
     xdot[7] = u[0]; // Acceleration
     }
 
@@ -156,17 +154,17 @@ void planWithSimpleSetup()
     // set the bounds for the control space
     ob::RealVectorBounds cbounds(4);
     // Bounds for u1
-    cbounds.setLow(0, -0.05);
-    cbounds.setHigh(0, 0.05);
+    cbounds.setLow(0, -0.1);
+    cbounds.setHigh(0, 0.1);
     // Bounds for u2
-    cbounds.setLow(1, -0.1);
-    cbounds.setHigh(1, 0.1);
+    cbounds.setLow(1, -0.05);
+    cbounds.setHigh(1, 0.05);
     // Bounds for u2
-    cbounds.setLow(2, -0.1);
-    cbounds.setHigh(2, 0.1);
+    cbounds.setLow(2, -0.05);
+    cbounds.setHigh(2, 0.05);
     // Bounds for u4
-    cbounds.setLow(3, -0.1);
-    cbounds.setHigh(3, 0.1);
+    cbounds.setLow(3, -0.05);
+    cbounds.setHigh(3, 0.05);
 
     // Set the control bounds
     cspace->setBounds(cbounds);
@@ -202,7 +200,7 @@ void planWithSimpleSetup()
     goal->as<ob::CompoundState>()->as<ob::SE3StateSpace::StateType>(0)->rotation().setIdentity();
 
     // For goal regions visit: https://ompl.kavrakilab.org/RigidBodyPlanningWithIK_8cpp_source.html
-    ss.setStartAndGoalStates(start, goal, 0.1);
+    ss.setStartAndGoalStates(start, goal);
 
     // Set the planner
     ob::PlannerPtr planner(new oc::SST(ss.getSpaceInformation()));

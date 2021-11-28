@@ -170,7 +170,7 @@ class SolutionAnimator:
         # plt.show()
 
 
-obs = Cuboid(np.array([5, 0, 0]), np.array([5, 5, 5]), np.array([0, 0, 0, 1]))
+obs = Cuboid(np.array([7.5, 0, 0]), np.array([5, 5, 5]), np.array([0, 0, 0, 1]))
 robot = Cuboid(np.array([0, 0, 0]), np.array([2, 1, 1]), np.array([0, 0, 0, 1]))
 
 files = [f for f in listdir("solutions") if isfile(join("solutions", f))]
