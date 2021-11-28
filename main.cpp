@@ -94,31 +94,31 @@ bool isStateValid(const oc::SpaceInformation* si, const ob::State* state)
     const bool collided = fcl::collide(robot_collision_object.get(), obstacle_collision_object.get(), requestType, collisionResult);
     const bool bounded = si->satisfiesBounds(state);
     // Checks if state is in valid bounds and that there is no collision
-    // std::cout << "X = " << se3state->getX() << ", Y = " << se3state->getY() << ", Z = " << se3state->getZ() << ", V = " << val->values[0] << ", bounded = " << bounded << std::endl;
-    return (bounded && !collisionResult.isCollision());
+    return (bounded && !collided);
     }
 
 // Uses base state information
-// bool isStateValid(const ob::SpaceInformation* si, const ob::State* state)
-//     {
-//     // TODO: Determine the difference between control and base state information
-//     const auto* se3state = state->as<ob::CompoundStateSpace::StateType>()->as<ob::SE3StateSpace::StateType>(0);
-//     const auto* pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
-//     const auto* rot = se3state->as<ob::SO3StateSpace::StateType>(1);
-//     fcl::Vector3f translation(pos->values[0], pos->values[1], pos->values[2]);
-//     fcl::Quaternionf rotation(rot->x, rot->y, rot->z, rot->w);
-//     fcl::CollisionRequestf requestType(1, false, 1, false);
-//     fcl::CollisionResultf collisionResult;
-//     robot_collision_object->setTransform(rotation, translation);
-//     fcl::collide(robot_collision_object.get(), obstacle_collision_object.get(), requestType, collisionResult);
-//     // Checks if state is in valid bounds and that there is no collision
-//     return (si->satisfiesBounds(state) && !collisionResult.isCollision());
-//     }
-
-void planWithSimpleSetup()
+bool isStateValid(const ob::SpaceInformation* si, const ob::State* state)
     {
-    // TODO: Create easy switch between geometric and kinodynamic planning 
-    // Obstacle setup
+    // TODO: Determine the difference between control and base state information
+    const auto* se3state = state->as<ob::CompoundStateSpace::StateType>()->as<ob::SE3StateSpace::StateType>(0);
+    const auto* pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
+    const auto* rot = se3state->as<ob::SO3StateSpace::StateType>(1);
+    fcl::Vector3f translation(pos->values[0], pos->values[1], pos->values[2]);
+    fcl::Quaternionf rotation(rot->x, rot->y, rot->z, rot->w);
+    fcl::CollisionRequestf requestType(1, false, 1, false);
+    fcl::CollisionResultf collisionResult;
+    robot_collision_object->setTransform(rotation, translation);
+    fcl::collide(robot_collision_object.get(), obstacle_collision_object.get(), requestType, collisionResult);
+    const bool collided = fcl::collide(robot_collision_object.get(), obstacle_collision_object.get(), requestType, collisionResult);
+    const bool bounded = si->satisfiesBounds(state);
+    // Checks if state is in valid bounds and that there is no collision
+    return (bounded && !collided);
+    }
+
+void planWithSimpleSetup(const std::string planType)
+    {
+    // TODO: Obstacle setup
 
 
     // State space setup
@@ -169,27 +169,7 @@ void planWithSimpleSetup()
     // Set the control bounds
     cspace->setBounds(cbounds);
 
-    // define a simple setup class
-    oc::SimpleSetup ss(cspace); // For controls problem
-    // og::SimpleSetup ss(stateSpace); // For geometric problem
-
-    // set state validity checking for this space, kinodynamic
-    oc::SpaceInformation* si = ss.getSpaceInformation().get();
-    ss.setStateValidityChecker(
-        [si](const ob::State* state) { return isStateValid(si, state); });
-    // si->setStateValidityCheckingResolution(0.1);
-
-    // set state validity checking for this space, geometric
-    // ob::SpaceInformation* si = ss.getSpaceInformation().get();
-    // ss.setStateValidityChecker(
-    //     [si](const ob::State* state) { return isStateValid(si, state); });
-
-    // Use the ODESolver to propagate the system. Call PostIntegration
-    // when integration has finished to normalize the orientation values.
-    // Comment this out for geometric planning
-    auto odeSolver(std::make_shared<oc::ODEBasicSolver<>>(ss.getSpaceInformation(), &DynamicsODE));
-    ss.setStatePropagator(oc::ODESolver::getStatePropagator(odeSolver, &PostIntegration));
-
+    // Declaring start and goal states
     // For compound state spaces: https://ompl.kavrakilab.org/HybridSystemPlanning_8cpp_source.html
     ob::ScopedState<> start(stateSpace);
     start->as<ob::CompoundState>()->as<ob::SE3StateSpace::StateType>(0)->setXYZ(0.0, 0.0, 0.0);
@@ -199,41 +179,98 @@ void planWithSimpleSetup()
     goal->as<ob::CompoundState>()->as<ob::SE3StateSpace::StateType>(0)->setXYZ(15.0, 0.0, 0.0);
     goal->as<ob::CompoundState>()->as<ob::SE3StateSpace::StateType>(0)->rotation().setIdentity();
 
-    // For goal regions visit: https://ompl.kavrakilab.org/RigidBodyPlanningWithIK_8cpp_source.html
-    ss.setStartAndGoalStates(start, goal);
-
-    // Set the planner
-    ob::PlannerPtr planner(new oc::SST(ss.getSpaceInformation()));
-    ss.setPlanner(planner);
-
-    ss.setup();
-
-
-    // Time to find a solution
-    const float solve_time = 60;
-
-    // Solve the planning problem
-    ob::PlannerStatus solved = ss.solve(solve_time);
-    // ss.simplifySolution();
-
-    if (solved)
+    if (planType == "k")
         {
-        std::cout << "Found solution!" << std::endl;
-        std::ofstream file("../solutions/solution.txt");
-        ss.getSolutionPath().printAsMatrix(file);
-        file.close();
+        oc::SimpleSetup ss(cspace); // For controls problem
+        // set state validity checking for this space, kinodynamic
+        oc::SpaceInformation* si = ss.getSpaceInformation().get();
+        ss.setStateValidityChecker(
+            [si](const ob::State* state) { return isStateValid(si, state); });
+        // si->setStateValidityCheckingResolution(0.1);
+
+        // Use the ODESolver to propagate the system. Call PostIntegration
+        // when integration has finished to normalize the orientation values.
+        auto odeSolver(std::make_shared<oc::ODEBasicSolver<>>(ss.getSpaceInformation(), &DynamicsODE));
+        ss.setStatePropagator(oc::ODESolver::getStatePropagator(odeSolver, &PostIntegration));
+
+        // Set the planner
+        ob::PlannerPtr planner(new oc::SST(ss.getSpaceInformation()));
+        ss.setPlanner(planner);
+
+        // For goal regions visit: https://ompl.kavrakilab.org/RigidBodyPlanningWithIK_8cpp_source.html
+        ss.setStartAndGoalStates(start, goal);
+        ss.setup();
+
+        // Time to find a solution
+        const float solve_time = 30;
+
+        // Solve the planning problem
+        ob::PlannerStatus solved = ss.solve(solve_time);
+        // ss.simplifySolution();
+
+        if (solved)
+            {
+            std::cout << "Found solution!" << std::endl;
+            std::ofstream file("../solutions/solution.txt");
+            ss.getSolutionPath().printAsMatrix(file);
+            file.close();
+            }
+        else
+            {
+            std::cout << "No solution found" << std::endl;
+            }
         }
-    else
-        std::cout << "No solution found" << std::endl;
+    else if (planType == "g")
+        {
+        og::SimpleSetup ss(stateSpace); // For geometric problem
+        // set state validity checking for this space, geometric
+        ob::SpaceInformation* si = ss.getSpaceInformation().get();
+        ss.setStateValidityChecker(
+            [si](const ob::State* state) { return isStateValid(si, state); });
+
+        // For goal regions visit: https://ompl.kavrakilab.org/RigidBodyPlanningWithIK_8cpp_source.html
+        ss.setStartAndGoalStates(start, goal);
+        ss.setup();
+
+        // Time to find a solution
+        const float solve_time = 30;
+
+        // Solve the planning problem
+        ob::PlannerStatus solved = ss.solve(solve_time);
+        // ss.simplifySolution();
+
+        if (solved)
+            {
+            std::cout << "Found solution!" << std::endl;
+            std::ofstream file("../solutions/solution.txt");
+            ss.getSolutionPath().printAsMatrix(file);
+            file.close();
+            }
+        else
+            {
+            std::cout << "No solution found" << std::endl;
+            }
+
+        }
     }
 
-int main(int /*argc*/, char** /*argv*/)
+int main(int argc, char* argv[])
     {
-    fcl::Vector3f obs_translation(7.5, 0.0, 0.0);
-    fcl::Quaternionf obs_rotation(0, 0, 0, 1);
-    obstacle_collision_object->setTransform(obs_rotation, obs_translation);
-    //const auto box = CollisionBox(2.0, 1.0, 1.0);
-    planWithSimpleSetup();
-
+    if (argc == 2)
+        {
+        fcl::Vector3f obs_translation(7.5, 0.0, 0.0);
+        fcl::Quaternionf obs_rotation(0, 0, 0, 1);
+        obstacle_collision_object->setTransform(obs_rotation, obs_translation);
+        //const auto box = CollisionBox(2.0, 1.0, 1.0);
+        planWithSimpleSetup(argv[1]);
+        }
+    else if (argc > 2)
+        {
+        printf("Too many arguments supplied.\n");
+        }
+    else
+        {
+        printf("One argument expected.\n");
+        }
     return 0;
     }
