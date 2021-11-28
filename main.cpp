@@ -12,6 +12,7 @@
 #include <ompl/control/spaces/RealVectorControlSpace.h>
 #include <ompl/control/SimpleSetup.h>
 #include <ompl/geometric/SimpleSetup.h>
+#include <ompl/control/planners/sst/SST.h>
 #include <ompl/config.h>
 
 /* FCL */
@@ -51,20 +52,24 @@ auto CollisionBox(float l, float h, float w, fcl::Vector3f translation, fcl::Qua
 void DynamicsODE(const oc::ODESolver::StateType& x, const oc::Control* control, oc::ODESolver::StateType& xdot)
     {
     // TODO: Update to get proper dynamics, use quaternion math if possible
-    // const double* u = control->as<oc::RealVectorControlSpace::ControlType>()->values;
-    // const double theta = x[2];
-    // const double carLength = 0.2;
-
+    const double* u = control->as<oc::RealVectorControlSpace::ControlType>()->values;
+    const Eigen::Quaternionf orientation(x[3], x[4], x[5], x[6]);
+    // std::cout << x[7] << ", " << u[0] << std::endl;
+    const Eigen::Vector3f body_velocity(x[7], 0, 0);
+    const Eigen::Vector3f vel = -(orientation * body_velocity);
+    // std::cout << vel << std::endl;
     // Zero out qdot
     xdot.resize(x.size(), 0);
-    // xdot[0] = u[0] * cos(theta);
-    // xdot[1] = u[0] * sin(theta);
-    // xdot[2] = u[0] * tan(u[1]) / carLength;
-    // xdot[3] = 0;
-    // xdot[4] = 0;
-    // xdot[5] = 0;
-    // xdot[6] = 0;
-    // xdot[7] = 0;
+    //xdot[0] = 1;
+    // Something wrong with velocity, needs to be negative in order to find solution? 
+    xdot[0] = vel[0]; // X Velocity
+    xdot[1] = vel[1]; // Y Velocity
+    xdot[2] = vel[2]; // Z Velocity
+    xdot[3] = 0.5 * (u[1] * x[6] + u[2] * x[5] - u[3] * x[4]); // q_dot x
+    xdot[4] = 0.5 * (u[2] * x[6] + u[3] * x[3] - u[1] * x[5]); // q_dot y
+    xdot[5] = 0.5 * (u[3] * x[6] + u[1] * x[4] - u[2] * x[3]); // q_dot z
+    xdot[6] = -0.5 * (u[1] * x[3] + u[2] * x[4] + u[3] * x[5]); // q_dot w
+    xdot[7] = u[0]; // Acceleration
     }
 
 // This is a callback method invoked after numerical integration.
@@ -81,15 +86,18 @@ bool isStateValid(const oc::SpaceInformation* si, const ob::State* state)
     const auto* se3state = state->as<ob::CompoundStateSpace::StateType>()->as<ob::SE3StateSpace::StateType>(0);
     const auto* pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
     const auto* rot = se3state->as<ob::SO3StateSpace::StateType>(1);
-
+    const auto* val = state->as<ob::CompoundStateSpace::StateType>()->as<ob::RealVectorStateSpace::StateType>(1);
+    // std::cout << "X = " << se3state->getX() << ", Y = " << se3state->getY() << ", Z = " << se3state->getZ() << std::endl;
     fcl::Vector3f translation(pos->values[0], pos->values[1], pos->values[2]);
     fcl::Quaternionf rotation(rot->x, rot->y, rot->z, rot->w);
     fcl::CollisionRequestf requestType(1, false, 1, false);
     fcl::CollisionResultf collisionResult;
     robot_collision_object->setTransform(rotation, translation);
-    fcl::collide(robot_collision_object.get(), obstacle_collision_object.get(), requestType, collisionResult);
+    const bool collided = fcl::collide(robot_collision_object.get(), obstacle_collision_object.get(), requestType, collisionResult);
+    const bool bounded = si->satisfiesBounds(state);
     // Checks if state is in valid bounds and that there is no collision
-    return (si->satisfiesBounds(state) && !collisionResult.isCollision());
+    // std::cout << "X = " << se3state->getX() << ", Y = " << se3state->getY() << ", Z = " << se3state->getZ() << ", V = " << val->values[0] << ", bounded = " << bounded << std::endl;
+    return (bounded && !collisionResult.isCollision());
     }
 
 // Uses base state information
@@ -136,7 +144,7 @@ void planWithSimpleSetup()
     // Create the bounds for the velocity space
     ob::RealVectorBounds velocityBound(1);
     velocityBound.setLow(0);
-    velocityBound.setHigh(2);
+    velocityBound.setHigh(0.5);
 
     // Set the bounds for the spaces
     SE3->setBounds(bounds);
@@ -148,12 +156,12 @@ void planWithSimpleSetup()
     // set the bounds for the control space
     ob::RealVectorBounds cbounds(4);
     // Bounds for u1
-    cbounds.setLow(0, -0.3);
-    cbounds.setHigh(0, 0.3);
+    cbounds.setLow(0, -0.05);
+    cbounds.setHigh(0, 0.05);
     // Bounds for u2
     cbounds.setLow(1, -0.1);
     cbounds.setHigh(1, 0.1);
-    // Bounds for u3
+    // Bounds for u2
     cbounds.setLow(2, -0.1);
     cbounds.setHigh(2, 0.1);
     // Bounds for u4
@@ -171,6 +179,7 @@ void planWithSimpleSetup()
     oc::SpaceInformation* si = ss.getSpaceInformation().get();
     ss.setStateValidityChecker(
         [si](const ob::State* state) { return isStateValid(si, state); });
+    // si->setStateValidityCheckingResolution(0.1);
 
     // set state validity checking for this space, geometric
     // ob::SpaceInformation* si = ss.getSpaceInformation().get();
@@ -193,12 +202,17 @@ void planWithSimpleSetup()
     goal->as<ob::CompoundState>()->as<ob::SE3StateSpace::StateType>(0)->rotation().setIdentity();
 
     // For goal regions visit: https://ompl.kavrakilab.org/RigidBodyPlanningWithIK_8cpp_source.html
-    ss.setStartAndGoalStates(start, goal, 0.05);
+    ss.setStartAndGoalStates(start, goal, 0.1);
+
+    // Set the planner
+    ob::PlannerPtr planner(new oc::SST(ss.getSpaceInformation()));
+    ss.setPlanner(planner);
 
     ss.setup();
 
+
     // Time to find a solution
-    const float solve_time = 5;
+    const float solve_time = 60;
 
     // Solve the planning problem
     ob::PlannerStatus solved = ss.solve(solve_time);
@@ -217,7 +231,7 @@ void planWithSimpleSetup()
 
 int main(int /*argc*/, char** /*argv*/)
     {
-    fcl::Vector3f obs_translation(5.0, 0.0, 0.0);
+    fcl::Vector3f obs_translation(7.5, 0.0, 0.0);
     fcl::Quaternionf obs_rotation(0, 0, 0, 1);
     obstacle_collision_object->setTransform(obs_rotation, obs_translation);
     //const auto box = CollisionBox(2.0, 1.0, 1.0);

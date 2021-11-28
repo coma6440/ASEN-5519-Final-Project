@@ -158,14 +158,14 @@ class SolutionAnimator:
             animate,
             fargs=(objects,),
             frames=self.n,
-            interval=100,
+            interval=1,
             blit=True,
         )
         # Save
         ani.save(
             "test.gif",
             writer="pillow",
-            fps=1,
+            fps=10,
         )
         # plt.show()
 
