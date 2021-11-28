@@ -59,7 +59,7 @@ class SolutionAnimator:
         data = np.genfromtxt(infolder + fname, delimiter=" ")
         self.n = len(data)
         self.pos = data[:, 0:3]
-        self.rot = data[:, 3:8]
+        self.rot = data[:, 3:7]
 
     def get_path_info(self, idx):
         return self.pos[idx, :], self.rot[idx, :]

@@ -48,19 +48,23 @@ auto CollisionBox(float l, float h, float w, fcl::Vector3f translation, fcl::Qua
     }
 
 // Definition of the ODE for the kinematic car.
-void DynamicsODE(const oc::ODESolver::StateType& q, const oc::Control* control, oc::ODESolver::StateType& qdot)
+void DynamicsODE(const oc::ODESolver::StateType& x, const oc::Control* control, oc::ODESolver::StateType& xdot)
     {
     // TODO: Update to get proper dynamics, use quaternion math if possible
-    const double* u = control->as<oc::RealVectorControlSpace::ControlType>()->values;
-    const double theta = q[2];
-    double carLength = 0.2;
+    // const double* u = control->as<oc::RealVectorControlSpace::ControlType>()->values;
+    // const double theta = x[2];
+    // const double carLength = 0.2;
 
     // Zero out qdot
-    qdot.resize(q.size(), 0);
-
-    qdot[0] = u[0] * cos(theta);
-    qdot[1] = u[0] * sin(theta);
-    qdot[2] = u[0] * tan(u[1]) / carLength;
+    xdot.resize(x.size(), 0);
+    // xdot[0] = u[0] * cos(theta);
+    // xdot[1] = u[0] * sin(theta);
+    // xdot[2] = u[0] * tan(u[1]) / carLength;
+    // xdot[3] = 0;
+    // xdot[4] = 0;
+    // xdot[5] = 0;
+    // xdot[6] = 0;
+    // xdot[7] = 0;
     }
 
 // This is a callback method invoked after numerical integration.
@@ -68,15 +72,16 @@ void PostIntegration(const ob::State* /*state*/, const oc::Control* /*control*/,
     {
     // Normalize orientation between 0 and 2*pi
     ob::SO3StateSpace SO3;
-    SO3.enforceBounds(result->as<ob::SE3StateSpace::StateType>()->as<ob::SO3StateSpace::StateType>(1));
+    SO3.enforceBounds(result->as<ob::CompoundStateSpace::StateType>()->as<ob::SE3StateSpace::StateType>(0)->as<ob::SO3StateSpace::StateType>(1));
     }
 
 // Uses control space information
 bool isStateValid(const oc::SpaceInformation* si, const ob::State* state)
     {
-    const auto* se3state = state->as<ob::SE3StateSpace::StateType>();
+    const auto* se3state = state->as<ob::CompoundStateSpace::StateType>()->as<ob::SE3StateSpace::StateType>(0);
     const auto* pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
     const auto* rot = se3state->as<ob::SO3StateSpace::StateType>(1);
+
     fcl::Vector3f translation(pos->values[0], pos->values[1], pos->values[2]);
     fcl::Quaternionf rotation(rot->x, rot->y, rot->z, rot->w);
     fcl::CollisionRequestf requestType(1, false, 1, false);
@@ -88,21 +93,21 @@ bool isStateValid(const oc::SpaceInformation* si, const ob::State* state)
     }
 
 // Uses base state information
-bool isStateValid(const ob::SpaceInformation* si, const ob::State* state)
-    {
-    // TODO: Determine the difference between control and base state information
-    const auto* se3state = state->as<ob::SE3StateSpace::StateType>();
-    const auto* pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
-    const auto* rot = se3state->as<ob::SO3StateSpace::StateType>(1);
-    fcl::Vector3f translation(pos->values[0], pos->values[1], pos->values[2]);
-    fcl::Quaternionf rotation(rot->x, rot->y, rot->z, rot->w);
-    fcl::CollisionRequestf requestType(1, false, 1, false);
-    fcl::CollisionResultf collisionResult;
-    robot_collision_object->setTransform(rotation, translation);
-    fcl::collide(robot_collision_object.get(), obstacle_collision_object.get(), requestType, collisionResult);
-    // Checks if state is in valid bounds and that there is no collision
-    return (si->satisfiesBounds(state) && !collisionResult.isCollision());
-    }
+// bool isStateValid(const ob::SpaceInformation* si, const ob::State* state)
+//     {
+//     // TODO: Determine the difference between control and base state information
+//     const auto* se3state = state->as<ob::CompoundStateSpace::StateType>()->as<ob::SE3StateSpace::StateType>(0);
+//     const auto* pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
+//     const auto* rot = se3state->as<ob::SO3StateSpace::StateType>(1);
+//     fcl::Vector3f translation(pos->values[0], pos->values[1], pos->values[2]);
+//     fcl::Quaternionf rotation(rot->x, rot->y, rot->z, rot->w);
+//     fcl::CollisionRequestf requestType(1, false, 1, false);
+//     fcl::CollisionResultf collisionResult;
+//     robot_collision_object->setTransform(rotation, translation);
+//     fcl::collide(robot_collision_object.get(), obstacle_collision_object.get(), requestType, collisionResult);
+//     // Checks if state is in valid bounds and that there is no collision
+//     return (si->satisfiesBounds(state) && !collisionResult.isCollision());
+//     }
 
 void planWithSimpleSetup()
     {
@@ -111,62 +116,83 @@ void planWithSimpleSetup()
 
 
     // State space setup
-    auto space(std::make_shared<ob::SE3StateSpace>());
+    auto SE3(std::make_shared<ob::SE3StateSpace>());
+    auto velocity(std::make_shared<ob::RealVectorStateSpace>(1));
+    // Make the compound state space
+    ob::StateSpacePtr stateSpace = SE3 + velocity;
 
+    // Create the bounds for the SE3 space
     ob::RealVectorBounds bounds(3);
-    // Set the bounds for the state space
+    // X Position
     bounds.setLow(0, 0);
     bounds.setHigh(0, 15);
+    // Y Position
     bounds.setLow(1, -10);
     bounds.setHigh(1, 10);
+    // Z Position
     bounds.setLow(2, -10);
-    bounds.setHigh(1, 10);
+    bounds.setHigh(2, 10);
 
-    space->setBounds(bounds);
+    // Create the bounds for the velocity space
+    ob::RealVectorBounds velocityBound(1);
+    velocityBound.setLow(0);
+    velocityBound.setHigh(2);
+
+    // Set the bounds for the spaces
+    SE3->setBounds(bounds);
+    velocity->setBounds(velocityBound);
 
     // create a control space
-    auto cspace(std::make_shared<oc::RealVectorControlSpace>(space, 2));
+    auto cspace(std::make_shared<oc::RealVectorControlSpace>(stateSpace, 4));
 
     // set the bounds for the control space
-    ob::RealVectorBounds cbounds(2);
+    ob::RealVectorBounds cbounds(4);
     // Bounds for u1
     cbounds.setLow(0, -0.3);
     cbounds.setHigh(0, 0.3);
     // Bounds for u2
-    cbounds.setLow(1, -0.5);
-    cbounds.setHigh(1, 0.5);
+    cbounds.setLow(1, -0.1);
+    cbounds.setHigh(1, 0.1);
+    // Bounds for u3
+    cbounds.setLow(2, -0.1);
+    cbounds.setHigh(2, 0.1);
+    // Bounds for u4
+    cbounds.setLow(3, -0.1);
+    cbounds.setHigh(3, 0.1);
 
     // Set the control bounds
     cspace->setBounds(cbounds);
 
     // define a simple setup class
-    // oc::SimpleSetup ss(cspace); // For controls problem
-    og::SimpleSetup ss(space); // For geometric problem
+    oc::SimpleSetup ss(cspace); // For controls problem
+    // og::SimpleSetup ss(stateSpace); // For geometric problem
 
     // set state validity checking for this space, kinodynamic
-    // oc::SpaceInformation* si = ss.getSpaceInformation().get();
-    // ss.setStateValidityChecker(
-    //     [si](const ob::State* state) { return isStateValid(si, state); });
-
-    // set state validity checking for this space, geometric
-    ob::SpaceInformation* si = ss.getSpaceInformation().get();
+    oc::SpaceInformation* si = ss.getSpaceInformation().get();
     ss.setStateValidityChecker(
         [si](const ob::State* state) { return isStateValid(si, state); });
+
+    // set state validity checking for this space, geometric
+    // ob::SpaceInformation* si = ss.getSpaceInformation().get();
+    // ss.setStateValidityChecker(
+    //     [si](const ob::State* state) { return isStateValid(si, state); });
 
     // Use the ODESolver to propagate the system. Call PostIntegration
     // when integration has finished to normalize the orientation values.
     // Comment this out for geometric planning
-    // auto odeSolver(std::make_shared<oc::ODEBasicSolver<>>(ss.getSpaceInformation(), &DynamicsODE));
-    // ss.setStatePropagator(oc::ODESolver::getStatePropagator(odeSolver, &PostIntegration));
+    auto odeSolver(std::make_shared<oc::ODEBasicSolver<>>(ss.getSpaceInformation(), &DynamicsODE));
+    ss.setStatePropagator(oc::ODESolver::getStatePropagator(odeSolver, &PostIntegration));
 
-    ob::ScopedState<ob::SE3StateSpace> start(space);
-    start->setXYZ(0.0, 0.0, 0.0);
-    start->rotation().setIdentity();
+    // For compound state spaces: https://ompl.kavrakilab.org/HybridSystemPlanning_8cpp_source.html
+    ob::ScopedState<> start(stateSpace);
+    start->as<ob::CompoundState>()->as<ob::SE3StateSpace::StateType>(0)->setXYZ(0.0, 0.0, 0.0);
+    start->as<ob::CompoundState>()->as<ob::SE3StateSpace::StateType>(0)->rotation().setIdentity();
 
-    ob::ScopedState<ob::SE3StateSpace> goal(space);
-    goal->setXYZ(15.0, 0.5, 0.0);
-    goal->rotation().setIdentity();
+    ob::ScopedState<> goal(stateSpace);
+    goal->as<ob::CompoundState>()->as<ob::SE3StateSpace::StateType>(0)->setXYZ(15.0, 0.0, 0.0);
+    goal->as<ob::CompoundState>()->as<ob::SE3StateSpace::StateType>(0)->rotation().setIdentity();
 
+    // For goal regions visit: https://ompl.kavrakilab.org/RigidBodyPlanningWithIK_8cpp_source.html
     ss.setStartAndGoalStates(start, goal, 0.05);
 
     ss.setup();
