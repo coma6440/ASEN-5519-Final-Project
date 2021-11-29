@@ -175,6 +175,7 @@ robot = Cuboid(np.array([0, 0, 0]), np.array([2, 1, 1]), np.array([0, 0, 0, 1]))
 
 files = [f for f in listdir("solutions") if isfile(join("solutions", f))]
 for fname in files:
+    # TODO: File naming and separating into folders
     print(f"Working on {fname}...")
     SA = SolutionAnimator(obs, robot, fname, "solutions/", "visualization/")
     SA.SubplotAnimate()

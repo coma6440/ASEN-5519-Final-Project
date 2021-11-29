@@ -3,6 +3,7 @@
 #include <valarray>
 #include <limits>
 #include <fstream>
+#include <time.h>
 
 /* OMPL */
 #include <ompl/base/SpaceInformation.h>
@@ -92,6 +93,25 @@ bool isStateValid(T si, const ob::State* state)
     return (bounded && !collided);
     }
 
+template <typename T>
+void savePath(T ss, ob::PlannerStatus solved)
+    {
+    static char name[50];
+    time_t now = time(0);
+    strftime(name, sizeof(name), "../solutions/sol_%Y%m%d%H%M%S.txt", localtime(&now));
+    std::ofstream file(name);
+    if (solved)
+        {
+        std::cout << "Found solution!" << std::endl;
+        ss.getSolutionPath().printAsMatrix(file);
+        file.close();
+        }
+    else
+        {
+        std::cout << "No solution found" << std::endl;
+        }
+    }
+
 void planWithSimpleSetup(const std::string planType)
     {
     // TODO: Obstacle setup
@@ -155,6 +175,8 @@ void planWithSimpleSetup(const std::string planType)
     goal->as<ob::CompoundState>()->as<ob::SE3StateSpace::StateType>(0)->setXYZ(15.0, 0.0, 0.0);
     goal->as<ob::CompoundState>()->as<ob::SE3StateSpace::StateType>(0)->rotation().setIdentity();
 
+
+    ob::PlannerStatus solved;
     if (planType == "k")
         {
         oc::SimpleSetup ss(cspace); // For controls problem
@@ -181,20 +203,10 @@ void planWithSimpleSetup(const std::string planType)
         const float solve_time = 30;
 
         // Solve the planning problem
-        ob::PlannerStatus solved = ss.solve(solve_time);
+        solved = ss.solve(solve_time);
         // ss.simplifySolution();
+        savePath(ss, solved);
 
-        if (solved)
-            {
-            std::cout << "Found solution!" << std::endl;
-            std::ofstream file("../solutions/solution.txt");
-            ss.getSolutionPath().printAsMatrix(file);
-            file.close();
-            }
-        else
-            {
-            std::cout << "No solution found" << std::endl;
-            }
         }
     else if (planType == "g")
         {
@@ -212,28 +224,18 @@ void planWithSimpleSetup(const std::string planType)
         const float solve_time = 5;
 
         // Solve the planning problem
-        ob::PlannerStatus solved = ss.solve(solve_time);
+        solved = ss.solve(solve_time);
+        savePath(ss, solved);
         // ss.simplifySolution();
-
-        if (solved)
-            {
-            std::cout << "Found solution!" << std::endl;
-            std::ofstream file("../solutions/solution.txt");
-            ss.getSolutionPath().printAsMatrix(file);
-            file.close();
-            }
-        else
-            {
-            std::cout << "No solution found" << std::endl;
-            }
-
         }
+
     }
 
 int main(int argc, char* argv[])
     {
     if (argc == 2)
         {
+        // TODO: Log obstacle information to solution file, maybe create solution .yaml files?
         fcl::Vector3f obs_translation(7.5, 0.0, 0.0);
         fcl::Quaternionf obs_rotation(0, 0, 0, 1);
         obstacle_collision_object->setTransform(obs_rotation, obs_translation);
