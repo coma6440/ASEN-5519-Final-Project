@@ -23,6 +23,8 @@ namespace ob = ompl::base;
 namespace oc = ompl::control;
 namespace og = ompl::geometric;
 
+// TODO: https://www.codeproject.com/Articles/1078771/Techniques-for-Avoiding-Code-Duplication#example2
+
 /* Global Variables and Constants */
 // Definition of single robot and obstacle, should remove global definition eventually
 const std::shared_ptr<fcl::CollisionGeometryf> robot_body(new fcl::Boxf(2.0, 1.0, 1.0));
@@ -32,14 +34,7 @@ const fcl::CollisionObjectf obstacle_body_object(obstacle_body, fcl::Transform3f
 const auto robot_collision_object = std::make_shared<fcl::CollisionObjectf>(robot_body_object);
 const auto obstacle_collision_object = std::make_shared<fcl::CollisionObjectf>(obstacle_body_object);
 
-auto CollisionBox(float l, float h, float w)
-    {
-    std::shared_ptr<fcl::CollisionGeometryf> geometry(new fcl::Boxf(l, w, h));
-    fcl::CollisionObjectf collision_object(geometry, fcl::Transform3f());
-    return std::make_shared<fcl::CollisionObjectf>(collision_object);
-    }
-
-auto CollisionBox(float l, float h, float w, fcl::Vector3f translation, fcl::Quaternionf rotation)
+auto CollisionBox(float l, float h, float w, fcl::Vector3f translation = fcl::Vector3f(0, 0, 0), fcl::Quaternionf rotation = fcl::Quaternionf(0, 0, 0, 1))
     {
     std::shared_ptr<fcl::CollisionGeometryf> geometry(new fcl::Boxf(l, w, h));
     fcl::CollisionObjectf collision_object(geometry, fcl::Transform3f());
@@ -78,8 +73,8 @@ void PostIntegration(const ob::State* /*state*/, const oc::Control* /*control*/,
     SO3.enforceBounds(result->as<ob::CompoundStateSpace::StateType>()->as<ob::SE3StateSpace::StateType>(0)->as<ob::SO3StateSpace::StateType>(1));
     }
 
-// Uses control space information
-bool isStateValid(const oc::SpaceInformation* si, const ob::State* state)
+template <typename T>
+bool isStateValid(T si, const ob::State* state)
     {
     const auto* se3state = state->as<ob::CompoundStateSpace::StateType>()->as<ob::SE3StateSpace::StateType>(0);
     const auto* pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
@@ -91,25 +86,6 @@ bool isStateValid(const oc::SpaceInformation* si, const ob::State* state)
     fcl::CollisionRequestf requestType(1, false, 1, false);
     fcl::CollisionResultf collisionResult;
     robot_collision_object->setTransform(rotation, translation);
-    const bool collided = fcl::collide(robot_collision_object.get(), obstacle_collision_object.get(), requestType, collisionResult);
-    const bool bounded = si->satisfiesBounds(state);
-    // Checks if state is in valid bounds and that there is no collision
-    return (bounded && !collided);
-    }
-
-// Uses base state information
-bool isStateValid(const ob::SpaceInformation* si, const ob::State* state)
-    {
-    // TODO: Determine the difference between control and base state information
-    const auto* se3state = state->as<ob::CompoundStateSpace::StateType>()->as<ob::SE3StateSpace::StateType>(0);
-    const auto* pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
-    const auto* rot = se3state->as<ob::SO3StateSpace::StateType>(1);
-    fcl::Vector3f translation(pos->values[0], pos->values[1], pos->values[2]);
-    fcl::Quaternionf rotation(rot->x, rot->y, rot->z, rot->w);
-    fcl::CollisionRequestf requestType(1, false, 1, false);
-    fcl::CollisionResultf collisionResult;
-    robot_collision_object->setTransform(rotation, translation);
-    fcl::collide(robot_collision_object.get(), obstacle_collision_object.get(), requestType, collisionResult);
     const bool collided = fcl::collide(robot_collision_object.get(), obstacle_collision_object.get(), requestType, collisionResult);
     const bool bounded = si->satisfiesBounds(state);
     // Checks if state is in valid bounds and that there is no collision
@@ -233,7 +209,7 @@ void planWithSimpleSetup(const std::string planType)
         ss.setup();
 
         // Time to find a solution
-        const float solve_time = 30;
+        const float solve_time = 5;
 
         // Solve the planning problem
         ob::PlannerStatus solved = ss.solve(solve_time);
