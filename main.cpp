@@ -94,15 +94,25 @@ bool isStateValid(T si, const ob::State* state)
     }
 
 template <typename T>
-void savePath(T ss, ob::PlannerStatus solved)
+void savePath(T ss, ob::PlannerStatus solved, std::string planType)
     {
     static char name[50];
     time_t now = time(0);
-    strftime(name, sizeof(name), "../solutions/sol_%Y%m%d%H%M%S.txt", localtime(&now));
-    std::ofstream file(name);
+
+
     if (solved)
         {
+        if (planType == "g")
+            {
+            strftime(name, sizeof(name), "../solutions/geometric/sol_%Y%m%d%H%M%S.txt", localtime(&now));
+            }
+        else if (planType == "k")
+            {
+            strftime(name, sizeof(name), "../solutions/kinodynamic/sol_%Y%m%d%H%M%S.txt", localtime(&now));
+            }
+
         std::cout << "Found solution!" << std::endl;
+        std::ofstream file(name);
         ss.getSolutionPath().printAsMatrix(file);
         file.close();
         }
@@ -205,7 +215,7 @@ void planWithSimpleSetup(const std::string planType)
         // Solve the planning problem
         solved = ss.solve(solve_time);
         // ss.simplifySolution();
-        savePath(ss, solved);
+        savePath(ss, solved, planType);
 
         }
     else if (planType == "g")
@@ -225,7 +235,7 @@ void planWithSimpleSetup(const std::string planType)
 
         // Solve the planning problem
         solved = ss.solve(solve_time);
-        savePath(ss, solved);
+        savePath(ss, solved, planType);
         // ss.simplifySolution();
         }
 
