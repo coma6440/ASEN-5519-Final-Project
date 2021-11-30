@@ -19,6 +19,9 @@
 /* FCL */
 #include <fcl/fcl.h>
 
+/* YAML */
+#include <yaml-cpp/yaml.h>
+
 /* Namespaces */
 namespace ob = ompl::base;
 namespace oc = ompl::control;
@@ -243,6 +246,16 @@ void planWithSimpleSetup(const std::string planType)
 
 int main(int argc, char* argv[])
     {
+    YAML::Node config = YAML::LoadFile("../configs/w1.yaml");
+    YAML::Node robot = config["robot"];
+    YAML::Node obstacles = config["obstacles"];
+    if (obstacles)
+        {
+        for (YAML::const_iterator it = obstacles.begin();it != obstacles.end();++it)
+            {
+            std::cout << obstacles[it->first.as<std::string>()] << std::endl;
+            }
+        }
     if (argc == 2)
         {
         // TODO: Log obstacle information to solution file, maybe create solution .yaml files?
