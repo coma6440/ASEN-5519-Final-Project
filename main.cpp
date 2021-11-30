@@ -21,6 +21,7 @@
 
 /* YAML */
 #include <yaml-cpp/yaml.h>
+#include <typeinfo>
 
 /* Namespaces */
 namespace ob = ompl::base;
@@ -31,12 +32,12 @@ namespace og = ompl::geometric;
 
 /* Global Variables and Constants */
 // Definition of single robot and obstacle, should remove global definition eventually
-const std::shared_ptr<fcl::CollisionGeometryf> robot_body(new fcl::Boxf(2.0, 1.0, 1.0));
-const std::shared_ptr<fcl::CollisionGeometryf> obstacle_body(new fcl::Boxf(5.0, 5.0, 5.0));
-const fcl::CollisionObjectf robot_body_object(robot_body, fcl::Transform3f());
-const fcl::CollisionObjectf obstacle_body_object(obstacle_body, fcl::Transform3f());
-const auto robot_collision_object = std::make_shared<fcl::CollisionObjectf>(robot_body_object);
-const auto obstacle_collision_object = std::make_shared<fcl::CollisionObjectf>(obstacle_body_object);
+// const std::shared_ptr<fcl::CollisionGeometryf> robot_body(new fcl::Boxf(2.0, 1.0, 1.0));
+// const std::shared_ptr<fcl::CollisionGeometryf> obstacle_body(new fcl::Boxf(5.0, 5.0, 5.0));
+// const fcl::CollisionObjectf robot_body_object(robot_body, fcl::Transform3f());
+// const fcl::CollisionObjectf obstacle_body_object(obstacle_body, fcl::Transform3f());
+// const auto robot_collision_object = std::make_shared<fcl::CollisionObjectf>(robot_body_object);
+// const auto obstacle_collision_object = std::make_shared<fcl::CollisionObjectf>(obstacle_body_object);
 
 auto CollisionBox(float l, float h, float w, fcl::Vector3f translation = fcl::Vector3f(0, 0, 0), fcl::Quaternionf rotation = fcl::Quaternionf(0, 0, 0, 1))
     {
@@ -78,7 +79,7 @@ void PostIntegration(const ob::State* /*state*/, const oc::Control* /*control*/,
     }
 
 template <typename T>
-bool isStateValid(T si, const ob::State* state)
+bool isStateValid(T si, const ob::State* state, std::vector<std::shared_ptr<fcl::CollisionObjectf>> obstacles, std::shared_ptr<fcl::CollisionObjectf> robot)
     {
     const auto* se3state = state->as<ob::CompoundStateSpace::StateType>()->as<ob::SE3StateSpace::StateType>(0);
     const auto* pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
@@ -89,11 +90,17 @@ bool isStateValid(T si, const ob::State* state)
     fcl::Quaternionf rotation(rot->x, rot->y, rot->z, rot->w);
     fcl::CollisionRequestf requestType(1, false, 1, false);
     fcl::CollisionResultf collisionResult;
-    robot_collision_object->setTransform(rotation, translation);
-    const bool collided = fcl::collide(robot_collision_object.get(), obstacle_collision_object.get(), requestType, collisionResult);
-    const bool bounded = si->satisfiesBounds(state);
-    // Checks if state is in valid bounds and that there is no collision
-    return (bounded && !collided);
+    robot->setTransform(rotation, translation);
+    // Checks that there are no collisions
+    for (std::shared_ptr<fcl::CollisionObjectf> obs : obstacles)
+        {
+        if (fcl::collide(robot.get(), obs.get(), requestType, collisionResult))
+            {
+            return false;
+            }
+        }
+    // Checks if state is in valid bounds
+    return si->satisfiesBounds(state);
     }
 
 template <typename T>
@@ -125,7 +132,7 @@ void savePath(T ss, ob::PlannerStatus solved, std::string planType)
         }
     }
 
-void planWithSimpleSetup(const std::string planType)
+void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr<fcl::CollisionObjectf>> obstacles, std::shared_ptr<fcl::CollisionObjectf> robot)
     {
     // TODO: Obstacle setup
 
@@ -196,7 +203,7 @@ void planWithSimpleSetup(const std::string planType)
         // set state validity checking for this space, kinodynamic
         oc::SpaceInformation* si = ss.getSpaceInformation().get();
         ss.setStateValidityChecker(
-            [si](const ob::State* state) { return isStateValid(si, state); });
+            [si, obstacles, robot](const ob::State* state) { return isStateValid(si, state, obstacles, robot); });
         // si->setStateValidityCheckingResolution(0.1);
 
         // Use the ODESolver to propagate the system. Call PostIntegration
@@ -227,7 +234,7 @@ void planWithSimpleSetup(const std::string planType)
         // set state validity checking for this space, geometric
         ob::SpaceInformation* si = ss.getSpaceInformation().get();
         ss.setStateValidityChecker(
-            [si](const ob::State* state) { return isStateValid(si, state); });
+            [si, obstacles, robot](const ob::State* state) { return isStateValid(si, state, obstacles, robot); });
 
         // For goal regions visit: https://ompl.kavrakilab.org/RigidBodyPlanningWithIK_8cpp_source.html
         ss.setStartAndGoalStates(start, goal);
@@ -247,23 +254,42 @@ void planWithSimpleSetup(const std::string planType)
 int main(int argc, char* argv[])
     {
     YAML::Node config = YAML::LoadFile("../configs/w1.yaml");
-    YAML::Node robot = config["robot"];
-    YAML::Node obstacles = config["obstacles"];
-    if (obstacles)
+    YAML::Node robot_node = config["robot"];
+    YAML::Node obs_node = config["obstacles"];
+
+    std::vector<std::shared_ptr<fcl::CollisionObjectf>> obstacles;
+    std::shared_ptr<fcl::CollisionObjectf> robot;
+
+    // Robot Definition
+    std::vector<float> rob_size = robot_node["size"].as<std::vector<float>>();
+    std::vector<float> start_pos = robot_node["start_position"].as<std::vector<float>>();
+    std::vector<float> goal_pos = robot_node["goal_position"].as<std::vector<float>>();
+
+    fcl::Vector3f rob_translation = fcl::Vector3f(start_pos[0], start_pos[1], start_pos[2]);
+    robot = CollisionBox(rob_size[0], rob_size[1], rob_size[2], rob_translation);
+
+    // Obstacles definition
+    if (obs_node)
         {
-        for (YAML::const_iterator it = obstacles.begin();it != obstacles.end();++it)
+        YAML::Node obs;
+        std::vector<float> obs_size;
+        std::vector<float> obs_pos;
+        std::vector<float> obs_orient;
+        // Iterate over all obstacles in yaml file
+        for (YAML::const_iterator it = obs_node.begin();it != obs_node.end();++it)
             {
-            std::cout << obstacles[it->first.as<std::string>()] << std::endl;
+            obs = obs_node[it->first.as<std::string>()];
+            obs_pos = obs["position"].as<std::vector<float>>();
+            obs_orient = obs["orientation"].as<std::vector<float>>();
+            obs_size = obs["size"].as<std::vector<float>>();
+            fcl::Vector3f obs_translation = fcl::Vector3f(obs_pos[0], obs_pos[1], obs_pos[2]);
+            fcl::Quaternionf obs_rotation = fcl::Quaternionf(obs_orient[0], obs_orient[1], obs_orient[2], obs_orient[3]);
+            obstacles.push_back(CollisionBox(obs_size[0], obs_size[1], obs_size[2], obs_translation, obs_rotation));
             }
         }
     if (argc == 2)
         {
-        // TODO: Log obstacle information to solution file, maybe create solution .yaml files?
-        fcl::Vector3f obs_translation(7.5, 0.0, 0.0);
-        fcl::Quaternionf obs_rotation(0, 0, 0, 1);
-        obstacle_collision_object->setTransform(obs_rotation, obs_translation);
-        //const auto box = CollisionBox(2.0, 1.0, 1.0);
-        planWithSimpleSetup(argv[1]);
+        planWithSimpleSetup(argv[1], obstacles, robot);
         }
     else if (argc > 2)
         {
