@@ -6,7 +6,7 @@
 
 ## Results
 Below is a visualization of trajectory found using a geometric planner without path smoothing:
-![til](./visualization/solution.gif)
+<!-- ![til](./visualization/solution.gif) -->
 
 <!-- And with path smoothing:
 ![til](./visualization/solution_simplified.gif) -->

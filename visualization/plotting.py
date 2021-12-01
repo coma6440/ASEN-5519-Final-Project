@@ -2,9 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from os import listdir
-from os.path import isfile, join
+from os.path import isfile, join, exists
 from scipy.spatial import ConvexHull
 from scipy.spatial.transform import Rotation as R
+import yaml
 
 
 class Cuboid:
@@ -67,7 +68,8 @@ class SolutionAnimator:
     def AzimuthAnimate(self):
         fig = plt.figure()
         ax = plt.axes(projection="3d")
-        self.obs.plot(ax, "red")
+        for o in self.obs:
+            o.plot(ax, "red")
         ax.plot3D(
             self.pos[:, 0],
             self.pos[:, 1],
@@ -98,13 +100,11 @@ class SolutionAnimator:
         # Create the plots
         fig, (ax1, ax2) = plt.subplots(1, 2, subplot_kw={"projection": "3d"})
         fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
-        # fig = plt.figure(figsize=(8, 5))
-        # ax1 = fig.add_subplot(121, projection="3d")
-        # ax2 = fig.add_subplot(122)
 
         # Add obstacles
-        self.obs.plot(ax1, "red", 0.3)
-        self.obs.plot(ax2, "red", 0.3)
+        for o in self.obs:
+            o.plot(ax1, "red", 0.3)
+            o.plot(ax2, "red", 0.3)
 
         # Limits
         ax1.set_xlim([0, 15])
@@ -163,20 +163,59 @@ class SolutionAnimator:
         )
         # Save
         ani.save(
-            "test.gif",
+            self.out_folder + self.fname.split(".")[0] + ".gif",
             writer="pillow",
             fps=10,
         )
         # plt.show()
 
 
-obs = Cuboid(np.array([7.5, 0, 0]), np.array([5, 5, 5]), np.array([0, 0, 0, 1]))
-robot = Cuboid(np.array([0, 0, 0]), np.array([2, 1, 1]), np.array([0, 0, 0, 1]))
+def load_environment(fname):
+    with open("configs/" + fname, "r") as f:
+        data = yaml.safe_load(f)
+        yaml_obs = data["obstacles"]
+        yaml_rob = data["robot"]
+        robot = Cuboid(
+            yaml_rob["start_position"], yaml_rob["size"], yaml_rob["start_orientation"]
+        )
+        obstacles = []
+        for key in yaml_obs:
+            obs = yaml_obs[key]
+            obstacles.append(Cuboid(obs["position"], obs["size"], obs["orientation"]))
+        return robot, obstacles
 
-files = [f for f in listdir("solutions") if isfile(join("solutions", f))]
-for fname in files:
+
+geo_files = [
+    f
+    for f in listdir("solutions/geometric/")
+    if isfile(join("solutions/geometric/", f))
+]
+
+kino_files = [
+    f
+    for f in listdir("solutions/kinodynamic/")
+    if isfile(join("solutions/kinodynamic/", f))
+]
+for fname in geo_files:
     # TODO: File naming and separating into folders
-    print(f"Working on {fname}...")
-    SA = SolutionAnimator(obs, robot, fname, "solutions/", "visualization/")
-    SA.SubplotAnimate()
-    # SA.AzimuthAnimate()
+    print(f"Working on geometric solution: {fname}...")
+    robot, obstacles = load_environment(fname.split("_")[0] + ".yaml")
+    SA = SolutionAnimator(
+        obstacles, robot, fname, "solutions/geometric/", "visualization/"
+    )
+    if not exists(SA.out_folder + SA.fname.split(".")[0] + ".gif"):
+        SA.SubplotAnimate()
+    else:
+        print("Solution plot already exists! Moving on...")
+
+for fname in kino_files:
+    # TODO: File naming and separating into folders
+    print(f"Working on kinodynamic solution: {fname}...")
+    robot, obstacles = load_environment(fname.split("_")[0] + ".yaml")
+    SA = SolutionAnimator(
+        obstacles, robot, fname, "solutions/kinodynamic/", "visualization/"
+    )
+    if not exists(SA.out_folder + SA.fname.split(".")[0] + ".gif"):
+        SA.SubplotAnimate()
+    else:
+        print("Solution plot already exists! Moving on...")

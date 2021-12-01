@@ -21,7 +21,6 @@
 
 /* YAML */
 #include <yaml-cpp/yaml.h>
-#include <typeinfo>
 
 /* Namespaces */
 namespace ob = ompl::base;
@@ -29,15 +28,6 @@ namespace oc = ompl::control;
 namespace og = ompl::geometric;
 
 // TODO: https://www.codeproject.com/Articles/1078771/Techniques-for-Avoiding-Code-Duplication#example2
-
-/* Global Variables and Constants */
-// Definition of single robot and obstacle, should remove global definition eventually
-// const std::shared_ptr<fcl::CollisionGeometryf> robot_body(new fcl::Boxf(2.0, 1.0, 1.0));
-// const std::shared_ptr<fcl::CollisionGeometryf> obstacle_body(new fcl::Boxf(5.0, 5.0, 5.0));
-// const fcl::CollisionObjectf robot_body_object(robot_body, fcl::Transform3f());
-// const fcl::CollisionObjectf obstacle_body_object(obstacle_body, fcl::Transform3f());
-// const auto robot_collision_object = std::make_shared<fcl::CollisionObjectf>(robot_body_object);
-// const auto obstacle_collision_object = std::make_shared<fcl::CollisionObjectf>(obstacle_body_object);
 
 auto CollisionBox(float l, float h, float w, fcl::Vector3f translation = fcl::Vector3f(0, 0, 0), fcl::Quaternionf rotation = fcl::Quaternionf(0, 0, 0, 1))
     {
@@ -104,7 +94,7 @@ bool isStateValid(T si, const ob::State* state, std::vector<std::shared_ptr<fcl:
     }
 
 template <typename T>
-void savePath(T ss, ob::PlannerStatus solved, std::string planType)
+void savePath(T ss, ob::PlannerStatus solved, std::string planType, std::string fname)
     {
     static char name[50];
     time_t now = time(0);
@@ -114,11 +104,13 @@ void savePath(T ss, ob::PlannerStatus solved, std::string planType)
         {
         if (planType == "g")
             {
-            strftime(name, sizeof(name), "../solutions/geometric/sol_%Y%m%d%H%M%S.txt", localtime(&now));
+            std::string s = "../solutions/geometric/" + fname + "_%Y%m%d%H%M%S.txt";
+            strftime(name, sizeof(name), s.c_str(), localtime(&now));
             }
         else if (planType == "k")
             {
-            strftime(name, sizeof(name), "../solutions/kinodynamic/sol_%Y%m%d%H%M%S.txt", localtime(&now));
+            std::string s = "../solutions/kinodynamic/" + fname + "_%Y%m%d%H%M%S.txt";
+            strftime(name, sizeof(name), s.c_str(), localtime(&now));
             }
 
         std::cout << "Found solution!" << std::endl;
@@ -132,7 +124,7 @@ void savePath(T ss, ob::PlannerStatus solved, std::string planType)
         }
     }
 
-void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr<fcl::CollisionObjectf>> obstacles, std::shared_ptr<fcl::CollisionObjectf> robot)
+void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr<fcl::CollisionObjectf>> obstacles, std::shared_ptr<fcl::CollisionObjectf> robot, std::string ws)
     {
     // TODO: Obstacle setup
 
@@ -225,7 +217,7 @@ void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr
         // Solve the planning problem
         solved = ss.solve(solve_time);
         // ss.simplifySolution();
-        savePath(ss, solved, planType);
+        savePath(ss, solved, planType, ws);
 
         }
     else if (planType == "g")
@@ -245,7 +237,7 @@ void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr
 
         // Solve the planning problem
         solved = ss.solve(solve_time);
-        savePath(ss, solved, planType);
+        savePath(ss, solved, planType, ws);
         // ss.simplifySolution();
         }
 
@@ -253,7 +245,13 @@ void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr
 
 int main(int argc, char* argv[])
     {
-    YAML::Node config = YAML::LoadFile("../configs/w1.yaml");
+    // TODO: Change this to be an input to program?
+    std::string fname = "w1.yaml";
+    std::istringstream iss(fname);
+    std::string ws;
+    std::getline(iss, ws, '.');
+    std::cout << "Planning with: " << fname << std::endl;
+    YAML::Node config = YAML::LoadFile("../configs/" + fname);
     YAML::Node robot_node = config["robot"];
     YAML::Node obs_node = config["obstacles"];
 
@@ -289,7 +287,7 @@ int main(int argc, char* argv[])
         }
     if (argc == 2)
         {
-        planWithSimpleSetup(argv[1], obstacles, robot);
+        planWithSimpleSetup(argv[1], obstacles, robot, ws);
         }
     else if (argc > 2)
         {
