@@ -15,6 +15,7 @@
 #include <ompl/geometric/SimpleSetup.h>
 #include <ompl/control/planners/sst/SST.h>
 #include <ompl/config.h>
+#include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 
 /* FCL */
 #include <fcl/fcl.h>
@@ -93,6 +94,8 @@ bool isStateValid(T si, const ob::State* state, std::vector<std::shared_ptr<fcl:
     return si->satisfiesBounds(state);
     }
 
+
+
 template <typename T>
 void savePath(T ss, ob::PlannerStatus solved, std::string planType, std::string fname)
     {
@@ -122,6 +125,13 @@ void savePath(T ss, ob::PlannerStatus solved, std::string planType, std::string 
         {
         std::cout << "No solution found" << std::endl;
         }
+    }
+
+ob::OptimizationObjectivePtr getThresholdPathLengthObj(const ob::SpaceInformationPtr& si)
+    {
+    ob::OptimizationObjectivePtr obj(new ob::PathLengthOptimizationObjective(si));
+    obj->setCostThreshold(ob::Cost(100));
+    return obj;
     }
 
 void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr<fcl::CollisionObjectf>> obstacles, std::shared_ptr<fcl::CollisionObjectf> robot, std::string ws)
@@ -207,15 +217,18 @@ void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr
         ob::PlannerPtr planner(new oc::SST(ss.getSpaceInformation()));
         ss.setPlanner(planner);
 
+
+        ss.setOptimizationObjective(getThresholdPathLengthObj(ss.getSpaceInformation()));
+
         // For goal regions visit: https://ompl.kavrakilab.org/RigidBodyPlanningWithIK_8cpp_source.html
-        ss.getSpaceInformation()->setPropagationStepSize(.5);
-        ss.getSpaceInformation()->setMinMaxControlDuration(1, 2);
-        ss.setStartAndGoalStates(start, goal);
+        // ss.getSpaceInformation()->setPropagationStepSize(.5);
+        // ss.getSpaceInformation()->setMinMaxControlDuration(1, 2);
+        ss.setStartAndGoalStates(start, goal, 2);
         ss.setup();
 
         // Time to find a solution
         // TODO: Pass this as a parameter
-        const float solve_time = 120;
+        const float solve_time = 30;
 
         // Solve the planning problem
         solved = ss.solve(solve_time);
