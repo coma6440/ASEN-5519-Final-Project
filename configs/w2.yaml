@@ -1,0 +1,27 @@
+---
+obstacles:
+  obs1:
+    position: [6, 5, 5]
+    orientation: [0.0, 0.0, 0.0, 1.0]
+    size: [1.0, 1.0, 1.0]
+  obs2:
+    position: [10, -7, -5]
+    orientation: [0.0, 0.0, 0.0, 1.0]
+    size: [1.0, 1.0, 1.0]
+  obs3:
+    position: [3, 2, 1]
+    orientation: [0.0, 0.0, 0.0, 1.0]
+    size: [1.0, 1.0, 1.0]
+  obs4:
+    position: [11, -1, 7]
+    orientation: [0.0, 0.0, 0.0, 1.0]
+    size: [1.0, 1.0, 1.0]
+  obs5:
+    position: [1, -4, -6]
+    orientation: [0.0, 0.0, 0.0, 1.0]
+    size: [1.0, 1.0, 1.0]
+robot:
+  size: [2.0, 1.0, 1.0]
+  start_position: [0.0, 0.0, 0.0]
+  goal_position: [15.0, 15.0, 15.0]
+  start_orientation: [0.0, 0.0, 0.0, 1.0]
