@@ -203,7 +203,7 @@ void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr
 
     // Create the bounds for the velocity space
     ob::RealVectorBounds velocityBound(1);
-    velocityBound.setLow(0);
+    velocityBound.setLow(0.0);
     velocityBound.setHigh(0.5);
 
     // Set the bounds for the spaces
@@ -216,17 +216,17 @@ void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr
     // set the bounds for the control space
     ob::RealVectorBounds cbounds(4);
     // Bounds for u1
-    cbounds.setLow(0, -0.1);
-    cbounds.setHigh(0, 0.1);
+    cbounds.setLow(0, -1);
+    cbounds.setHigh(0, 1);
     // Bounds for u2
-    cbounds.setLow(1, -0.05);
-    cbounds.setHigh(1, 0.05);
+    cbounds.setLow(1, -0.1);
+    cbounds.setHigh(1, 0.1);
     // Bounds for u2
-    cbounds.setLow(2, -0.05);
-    cbounds.setHigh(2, 0.05);
+    cbounds.setLow(2, -0.1);
+    cbounds.setHigh(2, 0.1);
     // Bounds for u4
-    cbounds.setLow(3, -0.05);
-    cbounds.setHigh(3, 0.05);
+    cbounds.setLow(3, -0.1);
+    cbounds.setHigh(3, 0.1);
 
     // Set the control bounds
     cspace->setBounds(cbounds);
