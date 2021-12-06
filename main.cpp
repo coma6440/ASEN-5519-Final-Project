@@ -16,6 +16,8 @@
 #include <ompl/control/planners/sst/SST.h>
 #include <ompl/config.h>
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
+#include <ompl/base/terminationconditions/CostConvergenceTerminationCondition.h>
+#include <ompl/base/goals/GoalSpace.h>
 
 /* FCL */
 #include <fcl/fcl.h>
@@ -75,7 +77,7 @@ bool isStateValid(T si, const ob::State* state, std::vector<std::shared_ptr<fcl:
     const auto* se3state = state->as<ob::CompoundStateSpace::StateType>()->as<ob::SE3StateSpace::StateType>(0);
     const auto* pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
     const auto* rot = se3state->as<ob::SO3StateSpace::StateType>(1);
-    const auto* val = state->as<ob::CompoundStateSpace::StateType>()->as<ob::RealVectorStateSpace::StateType>(1);
+    const auto* vel = state->as<ob::CompoundStateSpace::StateType>()->as<ob::RealVectorStateSpace::StateType>(1);
     // std::cout << "X = " << se3state->getX() << ", Y = " << se3state->getY() << ", Z = " << se3state->getZ() << std::endl;
     fcl::Vector3f translation(pos->values[0], pos->values[1], pos->values[2]);
     fcl::Quaternionf rotation(rot->x, rot->y, rot->z, rot->w);
@@ -113,10 +115,10 @@ void savePath(T ss, ob::PlannerStatus solved, std::string planType, std::string 
         else if (planType == "k")
             {
             std::string s = "../solutions/kinodynamic/" + fname + "_%Y%m%d%H%M%S.txt";
+            std::cout << "Found a solution of length " << ss.getSolutionPath().length() << std::endl;
             strftime(name, sizeof(name), s.c_str(), localtime(&now));
             }
 
-        std::cout << "Found solution!" << std::endl;
         std::ofstream file(name);
         ss.getSolutionPath().printAsMatrix(file);
         file.close();
@@ -130,9 +132,51 @@ void savePath(T ss, ob::PlannerStatus solved, std::string planType, std::string 
 ob::OptimizationObjectivePtr getThresholdPathLengthObj(const ob::SpaceInformationPtr& si)
     {
     ob::OptimizationObjectivePtr obj(new ob::PathLengthOptimizationObjective(si));
-    obj->setCostThreshold(ob::Cost(100));
+    obj->setCostThreshold(ob::Cost(std::numeric_limits<double>::max()));
     return obj;
     }
+
+class MyGoalRegion : public ob::GoalRegion
+    {
+        public:
+        MyGoalRegion(const ob::SpaceInformationPtr& si) : ob::GoalRegion(si)
+            {
+            }
+        bool isSatisfied(const ob::State* st) const
+            {
+            const auto* se3state = st->as<ob::CompoundStateSpace::StateType>()->as<ob::SE3StateSpace::StateType>(0);
+            const auto* vel = st->as<ob::CompoundStateSpace::StateType>()->as<ob::RealVectorStateSpace::StateType>(1);
+            bool inGoal = false;
+            if (distanceGoal(st) < 2.0)
+                {
+                inGoal = true;
+                }
+            return inGoal;
+            }
+
+        bool isSatisfied(const ob::State* st, double* distance) const
+            {
+            bool result = isSatisfied(st);
+
+            if (distance != NULL)
+                {
+                *distance = distanceGoal(st);
+                }
+            return result;
+            }
+        double distanceGoal(const ob::State* st) const override
+            {
+            const auto* se3state = st->as<ob::CompoundStateSpace::StateType>()->as<ob::SE3StateSpace::StateType>(0);
+            const auto* vel = st->as<ob::CompoundStateSpace::StateType>()->as<ob::RealVectorStateSpace::StateType>(1);
+            double d = fabs((se3state->getX() - goal_x)) + fabs(se3state->getY() - goal_y) + fabs(se3state->getZ() - goal_z);
+            return d;
+            }
+        private:
+        float vel_bound = 0.1;
+        float goal_x = 15.0;
+        float goal_y = 0.0;
+        float goal_z = 0.0;
+    };
 
 void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr<fcl::CollisionObjectf>> obstacles, std::shared_ptr<fcl::CollisionObjectf> robot, std::string ws)
     {
@@ -223,15 +267,21 @@ void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr
         // For goal regions visit: https://ompl.kavrakilab.org/RigidBodyPlanningWithIK_8cpp_source.html
         // ss.getSpaceInformation()->setPropagationStepSize(.5);
         // ss.getSpaceInformation()->setMinMaxControlDuration(1, 2);
-        ss.setStartAndGoalStates(start, goal, 2);
+        // ss.setStartAndGoalStates(start, goal);
+
+        // Goal region
+        auto goal(std::make_shared<MyGoalRegion>(ss.getSpaceInformation()));
+        ss.setStartState(start);
+        ss.setGoal(goal);
         ss.setup();
 
-        // Time to find a solution
-        // TODO: Pass this as a parameter
-        const float solve_time = 30;
+        // Time to ind a solution
+        ob::PlannerTerminationCondition ptc_time = ob::timedPlannerTerminationCondition(120);
+        ob::PlannerTerminationCondition ptc_sol = ob::CostConvergenceTerminationCondition(ss.getProblemDefinition(), 1, 1);
+        ob::PlannerTerminationCondition ptc = ob::plannerOrTerminationCondition(ptc_time, ptc_sol);
 
         // Solve the planning problem
-        solved = ss.solve(solve_time);
+        solved = ss.solve(ptc);
         // ss.simplifySolution();
         savePath(ss, solved, planType, ws);
 
