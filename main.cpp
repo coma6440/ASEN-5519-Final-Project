@@ -139,7 +139,7 @@ ob::OptimizationObjectivePtr getThresholdPathLengthObj(const ob::SpaceInformatio
 
 class MyGoalRegion : public ob::GoalSampleableRegion
     {
-    public:
+        public:
         MyGoalRegion(const ob::SpaceInformationPtr& si) : ob::GoalSampleableRegion(si)
             {
             }
@@ -185,7 +185,7 @@ class MyGoalRegion : public ob::GoalSampleableRegion
             return 1000;
             }
 
-    private:
+        private:
         float vel_bound = 0.1;
         float goal_x = 15.0;
         float goal_y = 0.0;
@@ -293,7 +293,7 @@ void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr
         ss.setGoal(goal);
 
         // Time to ind a solution
-        ob::PlannerTerminationCondition ptc_time = ob::timedPlannerTerminationCondition(60);
+        ob::PlannerTerminationCondition ptc_time = ob::timedPlannerTerminationCondition(120);
         ob::PlannerTerminationCondition ptc_sol = ob::CostConvergenceTerminationCondition(ss.getProblemDefinition(), 1, 1);
         ob::PlannerTerminationCondition ptc = ob::plannerOrTerminationCondition(ptc_time, ptc_sol);
 
@@ -305,8 +305,14 @@ void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr
             {
             savePath(ss, solved, planType, ws);
             oc::PathControl path = ss.getSolutionPath();
-            std::cout << "Path length " << path.length() << std::endl;
             ob::State* st = path.getState(idx);
+
+            // This might not actually be working
+            // while (!goal.get()->isSatisfied(st))
+            //     {
+            path = ss.getSolutionPath();
+            std::cout << "Path length " << path.length() << std::endl;
+            st = path.getState(idx);
             auto* se3state = st->as<ob::CompoundStateSpace::StateType>()->as<ob::SE3StateSpace::StateType>(0);
             auto* start_se3 = start->as<ob::CompoundStateSpace::StateType>()->as<ob::SE3StateSpace::StateType>(0);
             auto* curr_vel = st->as<ob::CompoundStateSpace::StateType>()->as<ob::RealVectorStateSpace::StateType>(1);
@@ -319,9 +325,14 @@ void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr
             start_vel->values[0] = curr_vel->values[0];
             // Change the start state
             ss.setStartState(start);
-            ob::PlannerTerminationCondition ptc_time = ob::timedPlannerTerminationCondition(30);
+            ss.getProblemDefinition()->clearSolutionPaths();
+            ss.print(std::cout);
+            ob::PlannerTerminationCondition ptc_time = ob::timedPlannerTerminationCondition(path.getControlDuration(idx));
             solved = ss.solve(ptc_time);
             savePath(ss, solved, planType, ws);
+            idx++;
+            // }
+
             }
         else
             {
