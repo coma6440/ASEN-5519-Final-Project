@@ -4,6 +4,7 @@
 #include <limits>
 #include <fstream>
 #include <time.h>
+#include <random>
 
 /* OMPL */
 #include <ompl/base/SpaceInformation.h>
@@ -136,10 +137,10 @@ ob::OptimizationObjectivePtr getThresholdPathLengthObj(const ob::SpaceInformatio
     return obj;
     }
 
-class MyGoalRegion : public ob::GoalRegion
+class MyGoalRegion : public ob::GoalSampleableRegion
     {
-        public:
-        MyGoalRegion(const ob::SpaceInformationPtr& si) : ob::GoalRegion(si)
+    public:
+        MyGoalRegion(const ob::SpaceInformationPtr& si) : ob::GoalSampleableRegion(si)
             {
             }
         bool isSatisfied(const ob::State* st) const
@@ -171,11 +172,28 @@ class MyGoalRegion : public ob::GoalRegion
             double d = fabs((se3state->getX() - goal_x)) + fabs(se3state->getY() - goal_y) + fabs(se3state->getZ() - goal_z);
             return d;
             }
-        private:
+        void sampleGoal(ob::State* st) const override
+            {
+            auto* se3state = st->as<ob::CompoundStateSpace::StateType>()->as<ob::SE3StateSpace::StateType>(0);
+            auto* vel = st->as<ob::CompoundStateSpace::StateType>()->as<ob::RealVectorStateSpace::StateType>(1);
+            se3state->rotation().setIdentity();
+            vel->values[0] = 0.0;
+            se3state->setXYZ(15, 0, 0);
+            }
+        unsigned int maxSampleCount() const override
+            {
+            return 1000;
+            }
+
+    private:
         float vel_bound = 0.1;
         float goal_x = 15.0;
         float goal_y = 0.0;
         float goal_z = 0.0;
+        // std::default_random_engine generator;
+        // std::uniform_real_distribution<double> x_goal_dist(14.0, 15.0);
+        // std::uniform_real_distribution<double> y_goal_dist(-1.0, 1.0);
+
     };
 
 void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr<fcl::CollisionObjectf>> obstacles, std::shared_ptr<fcl::CollisionObjectf> robot, std::string ws)
@@ -273,18 +291,45 @@ void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr
         auto goal(std::make_shared<MyGoalRegion>(ss.getSpaceInformation()));
         ss.setStartState(start);
         ss.setGoal(goal);
-        ss.setup();
 
         // Time to ind a solution
-        ob::PlannerTerminationCondition ptc_time = ob::timedPlannerTerminationCondition(120);
+        ob::PlannerTerminationCondition ptc_time = ob::timedPlannerTerminationCondition(60);
         ob::PlannerTerminationCondition ptc_sol = ob::CostConvergenceTerminationCondition(ss.getProblemDefinition(), 1, 1);
         ob::PlannerTerminationCondition ptc = ob::plannerOrTerminationCondition(ptc_time, ptc_sol);
 
         // Solve the planning problem
         solved = ss.solve(ptc);
         // ss.simplifySolution();
-        savePath(ss, solved, planType, ws);
-
+        unsigned int idx = 1;
+        if (ss.haveExactSolutionPath())
+            {
+            savePath(ss, solved, planType, ws);
+            oc::PathControl path = ss.getSolutionPath();
+            std::cout << "Path length " << path.length() << std::endl;
+            ob::State* st = path.getState(idx);
+            auto* se3state = st->as<ob::CompoundStateSpace::StateType>()->as<ob::SE3StateSpace::StateType>(0);
+            auto* start_se3 = start->as<ob::CompoundStateSpace::StateType>()->as<ob::SE3StateSpace::StateType>(0);
+            auto* curr_vel = st->as<ob::CompoundStateSpace::StateType>()->as<ob::RealVectorStateSpace::StateType>(1);
+            auto* start_vel = start->as<ob::CompoundStateSpace::StateType>()->as<ob::RealVectorStateSpace::StateType>(1);
+            start_se3->setXYZ(se3state->getX(), se3state->getY(), se3state->getZ());
+            start_se3->rotation().x = se3state->rotation().x;
+            start_se3->rotation().y = se3state->rotation().y;
+            start_se3->rotation().z = se3state->rotation().z;
+            start_se3->rotation().w = se3state->rotation().w;
+            start_vel->values[0] = curr_vel->values[0];
+            // Change the start state
+            ss.setStartState(start);
+            ob::PlannerTerminationCondition ptc_time = ob::timedPlannerTerminationCondition(30);
+            solved = ss.solve(ptc_time);
+            savePath(ss, solved, planType, ws);
+            }
+        else
+            {
+            // ob::PlannerTerminationCondition ptc_time = ob::timedPlannerTerminationCondition(10);
+            // ob::PlannerTerminationCondition ptc_sol = ob::CostConvergenceTerminationCondition(ss.getProblemDefinition(), 1, 1);
+            // ob::PlannerTerminationCondition ptc = ob::plannerOrTerminationCondition(ptc_time, ptc_sol);
+            // ss.solve(ptc);
+            }
         }
     else if (planType == "g")
         {
