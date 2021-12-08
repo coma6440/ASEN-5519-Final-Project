@@ -19,7 +19,8 @@
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 #include <ompl/base/terminationconditions/CostConvergenceTerminationCondition.h>
 #include <ompl/base/goals/GoalSpace.h>
-
+#include <ompl/base/samplers/informed/PathLengthDirectInfSampler.h>
+#include <ompl/base/samplers/InformedStateSampler.h>
 /* FCL */
 #include <fcl/fcl.h>
 
@@ -196,10 +197,54 @@ class MyGoalRegion : public ob::GoalSampleableRegion
 
     };
 
+
+// ob::ValidStateSamplerPtr allocOBValidStateSampler(const ob::SpaceInformation* si, const ob::ProblemDefinitionPtr& pdef)
+//     {
+//     // we can perform any additional setup / configuration of a sampler here,
+//     // but there is nothing to tweak in case of the ObstacleBasedValidStateSampler.
+//     ob::PathLengthDirectInfSampler sampler(pdef, 100);
+//     ob::InformedStateSampler state_sampler(pdef, 100);
+//     return std::make_shared<ob::PathLengthDirectInfSampler>(pdef, 100);
+//     }
+
+// TODO: Make informed state sampler from informed state sampler class
+class MyValidStateSampler : public ob::ValidStateSampler
+    {
+        public:
+        ob::InformedSamplerPtr sampler;
+        ob::Cost maxCost;
+        MyValidStateSampler(const ob::SpaceInformation* si) : ValidStateSampler(si)
+            {
+            name_ = "my sampler";
+            }
+        bool sample(ob::State* state) override
+            {
+            return sampler->sampleUniform(state, maxCost);
+            }
+        // We don't need this in the example below.
+        bool sampleNear(ob::State* /*state*/, const ob::State* /*near*/, const double /*distance*/) override
+            {
+            throw ompl::Exception("MyValidStateSampler::sampleNear", "not implemented");
+            return false;
+            }
+        protected:
+        ompl::RNG rng_;
+        const unsigned int max_tries = 100;
+    };
+
+ob::ValidStateSamplerPtr allocMyValidStateSampler(const ob::SpaceInformation* si)
+    {
+    auto MyStateSampler = std::make_shared<MyValidStateSampler>(si);
+    ob::PathLengthOptimizationObjective OptimizationObj();
+    MyStateSampler->sampler = 0;
+    return MyStateSampler;
+    }
+
+
+
 void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr<fcl::CollisionObjectf>> obstacles, std::shared_ptr<fcl::CollisionObjectf> robot, std::string ws)
     {
     // TODO: Obstacle setup
-
 
     // State space setup
     auto SE3(std::make_shared<ob::SE3StateSpace>());
@@ -266,8 +311,7 @@ void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr
         oc::SimpleSetup ss(cspace); // For controls problem
         // set state validity checking for this space, kinodynamic
         oc::SpaceInformation* si = ss.getSpaceInformation().get();
-        ss.setStateValidityChecker(
-            [si, obstacles, robot](const ob::State* state) { return isStateValid(si, state, obstacles, robot); });
+        ss.setStateValidityChecker([si, obstacles, robot](const ob::State* state) { return isStateValid(si, state, obstacles, robot); });
         // si->setStateValidityCheckingResolution(0.1);
 
         // Use the ODESolver to propagate the system. Call PostIntegration
@@ -276,8 +320,8 @@ void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr
         ss.setStatePropagator(oc::ODESolver::getStatePropagator(odeSolver, &PostIntegration));
 
         // Set the planner
-        ob::PlannerPtr planner(new oc::SST(ss.getSpaceInformation()));
-        ss.setPlanner(planner);
+        // ob::PlannerPtr planner(new oc::SST(ss.getSpaceInformation()));
+        // ss.setPlanner(planner);
 
 
         ss.setOptimizationObjective(getThresholdPathLengthObj(ss.getSpaceInformation()));
@@ -306,32 +350,50 @@ void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr
             savePath(ss, solved, planType, ws);
             oc::PathControl path = ss.getSolutionPath();
             ob::State* st = path.getState(idx);
+            ob::PlannerPtr planner(new oc::SST(ss.getSpaceInformation()));
+            ss.setPlanner(planner);
+            // auto sampler(std::make_shared<ob::PathLengthDirectInfSampler>(ss.getProblemDefinition(), 100));
+            // ss.setStateValidityChecker([si, obstacles, robot](const ob::State* state) { return isStateValid(si, state, obstacles, robot); });
+            ob::ProblemDefinitionPtr pdef = ss.getProblemDefinition();
+            // auto fcn = [pdef, maxCost](const ob::SpaceInformation* si) { return MyValidStateSampler(si, pdef, maxCost); };
+            unsigned int max_tries = 100;
 
-            // This might not actually be working
-            // while (!goal.get()->isSatisfied(st))
+            ss.getSpaceInformation()->setValidStateSamplerAllocator(allocMyValidStateSampler);
+            // ss.getSpaceInformation()->setValidStateSamplerAllocator([pdef, max_tries](const ob::SpaceInformationPtr si)
             //     {
-            path = ss.getSolutionPath();
-            std::cout << "Path length " << path.length() << std::endl;
-            st = path.getState(idx);
-            auto* se3state = st->as<ob::CompoundStateSpace::StateType>()->as<ob::SE3StateSpace::StateType>(0);
-            auto* start_se3 = start->as<ob::CompoundStateSpace::StateType>()->as<ob::SE3StateSpace::StateType>(0);
-            auto* curr_vel = st->as<ob::CompoundStateSpace::StateType>()->as<ob::RealVectorStateSpace::StateType>(1);
-            auto* start_vel = start->as<ob::CompoundStateSpace::StateType>()->as<ob::RealVectorStateSpace::StateType>(1);
-            start_se3->setXYZ(se3state->getX(), se3state->getY(), se3state->getZ());
-            start_se3->rotation().x = se3state->rotation().x;
-            start_se3->rotation().y = se3state->rotation().y;
-            start_se3->rotation().z = se3state->rotation().z;
-            start_se3->rotation().w = se3state->rotation().w;
-            start_vel->values[0] = curr_vel->values[0];
-            // Change the start state
-            ss.setStartState(start);
-            ss.getProblemDefinition()->clearSolutionPaths();
-            ss.print(std::cout);
-            ob::PlannerTerminationCondition ptc_time = ob::timedPlannerTerminationCondition(path.getControlDuration(idx));
-            solved = ss.solve(ptc_time);
-            savePath(ss, solved, planType, ws);
-            idx++;
-            // }
+            //     return ob::PathLengthOptimizationObjective(si).allocInformedStateSampler(pdef, max_tries);
+            //     });
+            // ss.getSpaceInformation()->setValidStateSamplerAllocator(getThresholdPathLengthObj(ss.getSpaceInformation())->allocInformedStateSampler(ss.getProblemDefinition(), 100));
+            // This might not actually be working
+            while (!goal.get()->isSatisfied(st))
+                {
+                path = ss.getSolutionPath();
+                if (ss.haveExactSolutionPath())
+                    {
+                    std::cout << "Path length: " << path.length() << ", cost: " << path.asGeometric().cost(getThresholdPathLengthObj(ss.getSpaceInformation())) << std::endl;
+                    savePath(ss, solved, planType, ws);
+                    }
+                st = path.getState(idx);
+                auto* se3state = st->as<ob::CompoundStateSpace::StateType>()->as<ob::SE3StateSpace::StateType>(0);
+                auto* start_se3 = start->as<ob::CompoundStateSpace::StateType>()->as<ob::SE3StateSpace::StateType>(0);
+                auto* curr_vel = st->as<ob::CompoundStateSpace::StateType>()->as<ob::RealVectorStateSpace::StateType>(1);
+                auto* start_vel = start->as<ob::CompoundStateSpace::StateType>()->as<ob::RealVectorStateSpace::StateType>(1);
+                start_se3->setXYZ(se3state->getX(), se3state->getY(), se3state->getZ());
+                start_se3->rotation().x = se3state->rotation().x;
+                start_se3->rotation().y = se3state->rotation().y;
+                start_se3->rotation().z = se3state->rotation().z;
+                start_se3->rotation().w = se3state->rotation().w;
+                start_vel->values[0] = curr_vel->values[0];
+                // Change the start state
+                std::cout << "Starting from:" << start_se3->getX() << ", " << start_se3->getY() << ", " << start_se3->getZ() << std::endl;
+                ss.getProblemDefinition()->clearStartStates();
+                ss.setStartState(start);
+                ss.getProblemDefinition()->clearSolutionPaths();
+                ob::PlannerTerminationCondition ptc_time = ob::timedPlannerTerminationCondition(path.getControlDuration(idx));
+                solved = ss.solve(ptc_time);
+                //
+                idx++;
+                }
 
             }
         else
