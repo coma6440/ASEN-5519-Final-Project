@@ -14,7 +14,8 @@
 #include <ompl/control/spaces/RealVectorControlSpace.h>
 #include <ompl/control/SimpleSetup.h>
 #include <ompl/geometric/SimpleSetup.h>
-#include <ompl/control/planners/sst/SST.h>
+// #include <ompl/control/planners/sst/SST.h>
+#include "MyPlanner.h"
 #include <ompl/config.h>
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 #include <ompl/base/terminationconditions/CostConvergenceTerminationCondition.h>
