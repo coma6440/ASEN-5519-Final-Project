@@ -197,52 +197,6 @@ class MyGoalRegion : public ob::GoalSampleableRegion
     };
 
 
-// ob::ValidStateSamplerPtr allocOBValidStateSampler(const ob::SpaceInformation* si, const ob::ProblemDefinitionPtr& pdef)
-//     {
-//     // we can perform any additional setup / configuration of a sampler here,
-//     // but there is nothing to tweak in case of the ObstacleBasedValidStateSampler.
-//     ob::PathLengthDirectInfSampler sampler(pdef, 100);
-//     ob::InformedStateSampler state_sampler(pdef, 100);
-//     return std::make_shared<ob::PathLengthDirectInfSampler>(pdef, 100);
-//     }
-
-// TODO: Make informed state sampler from informed state sampler class
-class MyValidStateSampler : public ob::ValidStateSampler
-    {
-        public:
-        ob::InformedSamplerPtr sampler;
-        ob::Cost maxCost;
-        MyValidStateSampler(const ob::SpaceInformation* si) : ValidStateSampler(si), sampler_(si->allocStateSampler())
-            {
-            name_ = "my sampler";
-            }
-        bool sample(ob::State* state) override
-            {
-            return sampler->sampleUniform(state, maxCost);
-            }
-        // We don't need this in the example below.
-        bool sampleNear(ob::State* /*state*/, const ob::State* /*near*/, const double /*distance*/) override
-            {
-            throw ompl::Exception("MyValidStateSampler::sampleNear", "not implemented");
-            return false;
-            }
-        protected:
-        ompl::RNG rng_;
-        ob::StateSamplerPtr sampler_;
-        const unsigned int max_tries = 100;
-    };
-
-ob::ValidStateSamplerPtr allocMyValidStateSampler(const ob::SpaceInformation* si)
-    {
-    auto MyStateSampler = std::make_shared<MyValidStateSampler>(si);
-    ob::PathLengthOptimizationObjective OptimizationObj();
-    // TODO: Test the informed sampler before trying this any further, if it doesn't work, make own informed sampler
-    MyStateSampler->sampler = 0;
-    return MyStateSampler;
-    }
-
-
-
 void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr<fcl::CollisionObjectf>> obstacles, std::shared_ptr<fcl::CollisionObjectf> robot, std::string ws)
     {
     // TODO: Obstacle setup
@@ -358,7 +312,7 @@ void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr
             // auto fcn = [pdef, maxCost](const ob::SpaceInformation* si) { return MyValidStateSampler(si, pdef, maxCost); };
             unsigned int max_tries = 100;
 
-            ss.getSpaceInformation()->setValidStateSamplerAllocator(allocMyValidStateSampler);
+            // ss.getSpaceInformation()->setValidStateSamplerAllocator(allocMyValidStateSampler);
             // ss.getSpaceInformation()->setValidStateSamplerAllocator([pdef, max_tries](const ob::SpaceInformationPtr si)
             //     {
             //     return ob::PathLengthOptimizationObjective(si).allocInformedStateSampler(pdef, max_tries);
@@ -388,7 +342,7 @@ void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr
                 std::cout << "Starting from:" << start_se3->getX() << ", " << start_se3->getY() << ", " << start_se3->getZ() << std::endl;
                 ss.getProblemDefinition()->clearStartStates();
                 ss.setStartState(start);
-                ss.getProblemDefinition()->clearSolutionPaths();
+                // ss.getProblemDefinition()->clearSolutionPaths();
                 ob::PlannerTerminationCondition ptc_time = ob::timedPlannerTerminationCondition(path.getControlDuration(idx));
                 solved = ss.solve(ptc_time);
                 //

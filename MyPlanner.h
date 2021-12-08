@@ -174,9 +174,11 @@ namespace ompl
                     return si_->distance(a->state_, b->state_);
                     }
 
-                base::StateSamplerPtr sampler_;
+                base::InformedSamplerPtr sampler_;
 
-                base::InformedSamplerPtr infSampler_;
+                base::Cost bestCost_{ std::numeric_limits<double>::quiet_NaN() };
+
+                unsigned int numSampleAttempts_{ 100u };
 
                 ControlSamplerPtr controlSampler_;
 

@@ -97,6 +97,13 @@ void ompl::control::SST::setup()
             opt_ = std::make_shared<base::PathLengthOptimizationObjective>(si_);
             pdef_->setOptimizationObjective(opt_);
             }
+
+        if (pdef_->hasExactSolution())
+            {
+            ompl::control::PathControl* path = pdef_->getSolutionPath()->as<ompl::control::PathControl>();
+            bestCost_ = path->asGeometric().cost(opt_);
+            OMPL_INFORM("%s: Setting best cost to %.5f", getName().c_str(), bestCost_.value());
+            }
         }
 
     prevSolutionCost_ = opt_->infiniteCost();
@@ -232,8 +239,9 @@ ompl::base::PlannerStatus ompl::control::SST::solve(const base::PlannerTerminati
 
     if (!sampler_)
         {
-        sampler_ = si_->allocStateSampler();
-        infSampler_ = opt_->allocInformedStateSampler(pdef_, 100);
+        // sampler_ = si_->allocStateSampler();
+        sampler_ = opt_->allocInformedStateSampler(pdef_, numSampleAttempts_);
+        // infSampler_ = opt_->allocInformedStateSampler(pdef_, numSampleAttempts_);
         }
     if (!controlSampler_)
         controlSampler_ = siC_->allocControlSampler();
@@ -258,7 +266,7 @@ ompl::base::PlannerStatus ompl::control::SST::solve(const base::PlannerTerminati
         if (goal_s && rng_.uniform01() < goalBias_ && goal_s->canSample())
             goal_s->sampleGoal(rstate);
         else
-            sampler_->sampleUniform(rstate);
+            sampler_->sampleUniform(rstate, bestCost_);
 
         /* find closest state in the tree */
         Motion* nmotion = selectNode(rmotion);
