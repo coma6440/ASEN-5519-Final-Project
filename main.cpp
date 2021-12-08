@@ -20,8 +20,6 @@
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 #include <ompl/base/terminationconditions/CostConvergenceTerminationCondition.h>
 #include <ompl/base/goals/GoalSpace.h>
-#include <ompl/base/samplers/informed/PathLengthDirectInfSampler.h>
-#include <ompl/base/samplers/InformedStateSampler.h>
 /* FCL */
 #include <fcl/fcl.h>
 

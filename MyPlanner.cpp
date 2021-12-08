@@ -39,6 +39,7 @@
 #include "ompl/base/objectives/MinimaxObjective.h"
 #include "ompl/base/objectives/MaximizeMinClearanceObjective.h"
 #include "ompl/base/objectives/PathLengthOptimizationObjective.h"
+#include <ompl/base/samplers/informed/PathLengthDirectInfSampler.h>
 #include "ompl/base/objectives/MechanicalWorkOptimizationObjective.h"
 #include "ompl/tools/config/SelfConfig.h"
 #include <limits>
@@ -230,7 +231,10 @@ ompl::base::PlannerStatus ompl::control::SST::solve(const base::PlannerTerminati
         }
 
     if (!sampler_)
+        {
         sampler_ = si_->allocStateSampler();
+        infSampler_ = opt_->allocInformedStateSampler(pdef_, 100);
+        }
     if (!controlSampler_)
         controlSampler_ = siC_->allocControlSampler();
 

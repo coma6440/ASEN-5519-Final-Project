@@ -38,6 +38,7 @@
 #define OMPL_CONTROL_PLANNERS_SST_mySST_
 
 #include "ompl/control/planners/PlannerIncludes.h"
+#include "ompl/base/OptimizationObjective.h"
 #include "ompl/datastructures/NearestNeighbors.h"
 
 namespace ompl
@@ -174,6 +175,8 @@ namespace ompl
                     }
 
                 base::StateSamplerPtr sampler_;
+
+                base::InformedSamplerPtr infSampler_;
 
                 ControlSamplerPtr controlSampler_;
 
