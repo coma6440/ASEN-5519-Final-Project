@@ -213,7 +213,7 @@ class MyValidStateSampler : public ob::ValidStateSampler
         public:
         ob::InformedSamplerPtr sampler;
         ob::Cost maxCost;
-        MyValidStateSampler(const ob::SpaceInformation* si) : ValidStateSampler(si)
+        MyValidStateSampler(const ob::SpaceInformation* si) : ValidStateSampler(si), sampler_(si->allocStateSampler())
             {
             name_ = "my sampler";
             }
@@ -229,6 +229,7 @@ class MyValidStateSampler : public ob::ValidStateSampler
             }
         protected:
         ompl::RNG rng_;
+        ob::StateSamplerPtr sampler_;
         const unsigned int max_tries = 100;
     };
 
@@ -236,6 +237,7 @@ ob::ValidStateSamplerPtr allocMyValidStateSampler(const ob::SpaceInformation* si
     {
     auto MyStateSampler = std::make_shared<MyValidStateSampler>(si);
     ob::PathLengthOptimizationObjective OptimizationObj();
+    // TODO: Test the informed sampler before trying this any further, if it doesn't work, make own informed sampler
     MyStateSampler->sampler = 0;
     return MyStateSampler;
     }
@@ -322,7 +324,6 @@ void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr
         // Set the planner
         // ob::PlannerPtr planner(new oc::SST(ss.getSpaceInformation()));
         // ss.setPlanner(planner);
-
 
         ss.setOptimizationObjective(getThresholdPathLengthObj(ss.getSpaceInformation()));
 
