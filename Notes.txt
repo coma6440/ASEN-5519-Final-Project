@@ -1,2 +1,0 @@
-Solution is in form
-x,y,z,qx,qy,qz,qw,u1,u2,t

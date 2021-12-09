@@ -176,6 +176,10 @@ namespace ompl
 
                 base::InformedSamplerPtr sampler_;
 
+                // base::StateSamplerPtr sampler_;
+
+                // base::StateSamplerPtr sampler2_;
+
                 base::Cost bestCost_{ std::numeric_limits<double>::quiet_NaN() };
 
                 unsigned int numSampleAttempts_{ 100u };

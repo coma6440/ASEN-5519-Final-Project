@@ -98,15 +98,21 @@ namespace ompl
 
                 unsigned int informedIdx_;
 
-                StateSpacePtr informedSubSpace_;
-
                 unsigned int uninformedIdx_;
+
+                StateSpacePtr informedSubSpace_;
 
                 StateSpacePtr uninformedSubSpace_;
 
+                StateSpacePtr uninformedSubSpace2_;
+
                 StateSamplerPtr baseSampler_;
 
+                StateSamplerPtr baseSampler2_;
+
                 StateSamplerPtr uninformedSubSampler_;
+
+                StateSamplerPtr uninformedSubSampler2_;
 
                 RNG rng_;
             };  // PathLengthDirectInfSampler

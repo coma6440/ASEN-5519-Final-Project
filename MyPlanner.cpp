@@ -39,8 +39,8 @@
 #include "ompl/base/objectives/MinimaxObjective.h"
 #include "ompl/base/objectives/MaximizeMinClearanceObjective.h"
 #include "ompl/base/objectives/PathLengthOptimizationObjective.h"
-// #include <ompl/base/samplers/informed/PathLengthDirectInfSampler.h>
-#include "MySampler.h"
+#include <ompl/base/samplers/informed/PathLengthDirectInfSampler.h>
+// #include "MySampler.h"
 #include "ompl/base/objectives/MechanicalWorkOptimizationObjective.h"
 #include "ompl/tools/config/SelfConfig.h"
 #include <limits>
@@ -241,8 +241,9 @@ ompl::base::PlannerStatus ompl::control::SST::solve(const base::PlannerTerminati
     if (!sampler_)
         {
         // sampler_ = si_->allocStateSampler();
+        std::cout << "Allocating sampler in planner" << std::endl;
         sampler_ = opt_->allocInformedStateSampler(pdef_, numSampleAttempts_);
-        // infSampler_ = opt_->allocInformedStateSampler(pdef_, numSampleAttempts_);
+        std::cout << "Allocated sampler" << std::endl;
         }
     if (!controlSampler_)
         controlSampler_ = siC_->allocControlSampler();
@@ -268,8 +269,9 @@ ompl::base::PlannerStatus ompl::control::SST::solve(const base::PlannerTerminati
             goal_s->sampleGoal(rstate);
         else
             sampler_->sampleUniform(rstate, bestCost_);
+        // sampler_->sampleUniform(rstate);
 
-        /* find closest state in the tree */
+    /* find closest state in the tree */
         Motion* nmotion = selectNode(rmotion);
 
         /* sample a random control that attempts to go towards the random state, and also sample a control duration */

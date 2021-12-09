@@ -158,46 +158,43 @@ namespace ompl
                     // throw Exception("PathLengthDirectInfSampler only supports RealVector, SE2 and SE3 statespaces.");
                     // Variable:
                     // An ease of use upcasted pointer to the space as a compound space
-                    const CompoundStateSpace* compoundSpace = InformedSampler::space_->as<CompoundStateSpace>();
-
-                    // Sanity check
-                    if (compoundSpace->getSubspaceCount() != 2u)
-                        {
-                        // Pout
-                        throw Exception("The provided compound StateSpace is SE(2) or SE(3) but does not have exactly "
-                            "2 subspaces.");
-                        }
-
+                    const CompoundStateSpace* compoundSpace1 = InformedSampler::space_->as<CompoundStateSpace>();
+                    const CompoundStateSpace* compoundSpace2 = compoundSpace1->getSubspace(0)->as<CompoundStateSpace>();
                     // Iterate over the state spaces, finding the real vector and SO components.
-                    // for (unsigned int idx = 0u;
-                    //     idx < InformedSampler::space_->as<CompoundStateSpace>()->getSubspaceCount(); ++idx)
-                    //     {
-                    //     // Check if the space is real-vectored, SO2 or SO3
-                    //     if (compoundSpace->getSubspace(idx)->getType() == STATE_SPACE_REAL_VECTOR)
-                    //         {
-                    //         informedIdx_ = idx;
-                    //         }
-                    //     else if (compoundSpace->getSubspace(idx)->getType() == STATE_SPACE_SO2)
-                    //         {
-                    //         uninformedIdx_ = idx;
-                    //         }
-                    //     else if (compoundSpace->getSubspace(idx)->getType() == STATE_SPACE_SO3)
-                    //         {
-                    //         uninformedIdx_ = idx;
-                    //         }
-                    //     else
-                    //         {
-                    //         // Pout
-                    //         throw Exception("The provided compound StateSpace is SE(2) or SE(3) but contains a "
-                    //             "subspace that is not R^2, R^3, SO(2), or SO(3).");
-                    //         }
-                    //     }
+                    for (unsigned int idx = 0u;
+                        idx < compoundSpace2->getSubspaceCount(); ++idx)
+                        {
+                        // Check if the space is real-vectored, SO2 or SO3
+                        if (compoundSpace2->getSubspace(idx)->getType() == STATE_SPACE_REAL_VECTOR)
+                            {
+                            informedIdx_ = idx;
+                            }
+                        else if (compoundSpace2->getSubspace(idx)->getType() == STATE_SPACE_SO2)
+                            {
+                            uninformedIdx_ = idx;
+                            }
+                        else if (compoundSpace2->getSubspace(idx)->getType() == STATE_SPACE_SO3)
+                            {
+                            uninformedIdx_ = idx;
+                            }
+                        else
+                            {
+                            // Pout
+                            throw Exception("The provided compound StateSpace is SE(2) or SE(3) but contains a "
+                                "subspace that is not R^2, R^3, SO(2), or SO(3).");
+                            }
+                        }
                     }
                 }
-
             // Create a sampler for the whole space that we can use if we have no information
-            baseSampler_ = InformedSampler::space_->allocDefaultStateSampler();
-
+            // const CompoundStateSpace* compoundSpace1 = InformedSampler::space_->as<CompoundStateSpace>();
+            // const CompoundStateSpace* compoundSpace2 = compoundSpace1->getSubspace(0)->as<CompoundStateSpace>();
+            // compoundSpace2->printSettings(std::cout);
+            // // baseSampler_ = InformedSampler::space_->as<CompoundStateSpace>()->getSubspace(0)->as<StateSpace>()->allocDefaultStateSampler();
+            baseSampler_ = space_->allocDefaultStateSampler();
+            // std::cout << "Allocated first sampler" << std::endl;
+            // baseSampler2_ = InformedSampler::space_->as<CompoundStateSpace>()->getSubspace(1)->allocStateSampler();
+            // std::cout << "Allocated base samplers" << std::endl;
             // Check if the space is compound
             if (!InformedSampler::space_->isCompound())
                 {
@@ -213,15 +210,25 @@ namespace ompl
             else
                 {
                 // It is
-
+                // TODO: Update this to split properly
+                std::cout << "Got here line 209" << std::endl;
+                const CompoundStateSpace* compoundSpace1 = InformedSampler::space_->as<CompoundStateSpace>();
+                const CompoundStateSpace* compoundSpace2 = compoundSpace1->getSubspace(0)->as<CompoundStateSpace>();
                 // Get a pointer to the informed subspace...
-                informedSubSpace_ = InformedSampler::space_->as<CompoundStateSpace>()->getSubspace(informedIdx_);
+                informedSubSpace_ = InformedSampler::space_->as<CompoundStateSpace>()->getSubspace(0)->as<CompoundStateSpace>()->getSubspace(informedIdx_);
 
                 // And the uninformed subspace is the remainder.
-                uninformedSubSpace_ = InformedSampler::space_->as<CompoundStateSpace>()->getSubspace(uninformedIdx_);
+                uninformedSubSpace_ = InformedSampler::space_->as<CompoundStateSpace>()->getSubspace(0)->as<CompoundStateSpace>()->getSubspace(uninformedIdx_);;
+                uninformedSubSpace2_ = compoundSpace1->getSubspace(1);
 
                 // Create a sampler for the uniformed subset:
+                uninformedSubSpace_->printSettings(std::cout);
+                std::cout << "Got here" << std::endl;
                 uninformedSubSampler_ = uninformedSubSpace_->allocDefaultStateSampler();
+                std::cout << "Finished allocating 1" << std::endl;
+                uninformedSubSampler2_ = uninformedSubSpace2_->allocDefaultStateSampler();
+                std::cout << "Finished allocation" << std::endl;
+
                 }
 
             // Store the foci, first the starts:
@@ -493,6 +500,7 @@ namespace ompl
             {
             // Variable
             // The raw data in the state
+            std::cout << "GetInformedSubstate()" << std::endl;
             std::vector<double> rawData(informedSubSpace_->getDimension());
 
             // Get the raw data
@@ -502,6 +510,7 @@ namespace ompl
                 }
             else
                 {
+                // TODO: Update this to get the correct components
                 informedSubSpace_->copyToReals(rawData, statePtr->as<CompoundState>()->components[informedIdx_]);
                 }
 
@@ -524,6 +533,7 @@ namespace ompl
                 // Variables
                 // A state for the uninformed subspace
                 State* uninformedState = uninformedSubSpace_->allocState();
+                State* uninformedState2 = uninformedSubSpace2_->allocState();
 
                 // Copy the informed subspace into the state pointer
                 informedSubSpace_->copyFromReals(statePtr->as<CompoundState>()->components[informedIdx_],
@@ -531,13 +541,16 @@ namespace ompl
 
                 // Sample the uniformed subspace
                 uninformedSubSampler_->sampleUniform(uninformedState);
+                uninformedSubSampler2_->sampleUniform(uninformedState2);
 
                 // Copy the informed subspace into the state pointer
                 uninformedSubSpace_->copyState(statePtr->as<CompoundState>()->components[uninformedIdx_],
                     uninformedState);
+                // uninformedSubSpace2_->copyState(statePtr->as<CompoundState>()->components, uninformedState2);
 
                 // Free the state
                 uninformedSubSpace_->freeState(uninformedState);
+                uninformedSubSpace2_->freeState(uninformedState2);
                 }
             }
 

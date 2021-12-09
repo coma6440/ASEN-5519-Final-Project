@@ -14,8 +14,8 @@
 #include <ompl/control/spaces/RealVectorControlSpace.h>
 #include <ompl/control/SimpleSetup.h>
 #include <ompl/geometric/SimpleSetup.h>
-// #include <ompl/control/planners/sst/SST.h>
-#include "MyPlanner.h"
+#include <ompl/control/planners/sst/SST.h>
+// #include "MyPlanner.h"
 #include <ompl/config.h>
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 #include <ompl/base/terminationconditions/CostConvergenceTerminationCondition.h>
@@ -30,6 +30,33 @@
 namespace ob = ompl::base;
 namespace oc = ompl::control;
 namespace og = ompl::geometric;
+
+
+unsigned int findPlanTime(std::vector<double> durations, unsigned int n_states, double plan_time, double& actual_time)
+    {
+    for (unsigned int i = 0; i < n_states; i++)
+        {
+        actual_time += durations[i];
+        if (actual_time >= plan_time)
+            {
+            return i;
+            }
+        }
+    return n_states - 1;
+
+    }
+
+oc::PathControl makePath(const ob::SpaceInformationPtr& si, oc::PathControl prevPath, const unsigned int start, const unsigned int end)
+    {
+    oc::PathControl path(si);
+    for (unsigned int i = start; i < end; i++)
+        {
+        path.append(prevPath.getState(i), prevPath.getControl(i), prevPath.getControlDuration(i));
+
+        }
+    return path;
+    }
+
 
 // TODO: https://www.codeproject.com/Articles/1078771/Techniques-for-Avoiding-Code-Duplication#example2
 
@@ -290,7 +317,7 @@ void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr
         ss.setStartState(start);
         ss.setGoal(goal);
 
-        // Time to ind a solution
+        // Time to find a solution
         ob::PlannerTerminationCondition ptc_time = ob::timedPlannerTerminationCondition(120);
         ob::PlannerTerminationCondition ptc_sol = ob::CostConvergenceTerminationCondition(ss.getProblemDefinition(), 1, 1);
         ob::PlannerTerminationCondition ptc = ob::plannerOrTerminationCondition(ptc_time, ptc_sol);
@@ -301,52 +328,81 @@ void planWithSimpleSetup(const std::string planType, std::vector<std::shared_ptr
         unsigned int idx = 1;
         if (ss.haveExactSolutionPath())
             {
-            savePath(ss, solved, planType, ws);
+            // savePath(ss, solved, planType, ws);
             oc::PathControl path = ss.getSolutionPath();
-            ob::State* st = path.getState(idx);
+            path.interpolate();
+            std::vector<double> durations = path.getControlDurations();
+            ob::Cost initialCost = path.asGeometric().cost(getThresholdPathLengthObj(ss.getSpaceInformation()));
+            ob::Cost segmentCost;
+            unsigned int n_states = durations.size();
+            double initialDuration = path.length();
+            std::cout << "Initial Path: n = " << n_states << ", t = " << initialDuration << ", c = " << initialCost.value() << std::endl;
+
+            // Set an optimizing planner
             ob::PlannerPtr planner(new oc::SST(ss.getSpaceInformation()));
             ss.setPlanner(planner);
-            // auto sampler(std::make_shared<ob::PathLengthDirectInfSampler>(ss.getProblemDefinition(), 100));
-            // ss.setStateValidityChecker([si, obstacles, robot](const ob::State* state) { return isStateValid(si, state, obstacles, robot); });
-            ob::ProblemDefinitionPtr pdef = ss.getProblemDefinition();
-            // auto fcn = [pdef, maxCost](const ob::SpaceInformation* si) { return MyValidStateSampler(si, pdef, maxCost); };
-            unsigned int max_tries = 100;
 
-            // ss.getSpaceInformation()->setValidStateSamplerAllocator(allocMyValidStateSampler);
-            // ss.getSpaceInformation()->setValidStateSamplerAllocator([pdef, max_tries](const ob::SpaceInformationPtr si)
-            //     {
-            //     return ob::PathLengthOptimizationObjective(si).allocInformedStateSampler(pdef, max_tries);
-            //     });
-            // ss.getSpaceInformation()->setValidStateSamplerAllocator(getThresholdPathLengthObj(ss.getSpaceInformation())->allocInformedStateSampler(ss.getProblemDefinition(), 100));
-            // This might not actually be working
+
+            // Initialize some variables used in the loop
+            ob::State* st = path.getState(0);
+            double dt = 10.0;
+            double actual_time = 0.0;
+            double accum_time = 0.0;
+            double planTime = 0.0;
+
+            // Get first path segment
+            unsigned int idx = findPlanTime(durations, n_states, actual_time + dt, actual_time);
+            planTime = actual_time - accum_time;
+            accum_time += actual_time;
+
+            // Define new start state
+            st = path.getState(idx);
+            savePath(ss, solved, planType, ws);
+
             while (!goal.get()->isSatisfied(st))
                 {
-                path = ss.getSolutionPath();
-                if (ss.haveExactSolutionPath())
+                std::cout << "Using idx " << idx << " gives planning time of " << planTime << std::endl;
+                if (planTime < dt)
                     {
-                    std::cout << "Path length: " << path.length() << ", cost: " << path.asGeometric().cost(getThresholdPathLengthObj(ss.getSpaceInformation())) << std::endl;
-                    savePath(ss, solved, planType, ws);
+                    break;
                     }
-                st = path.getState(idx);
-                auto* se3state = st->as<ob::CompoundStateSpace::StateType>()->as<ob::SE3StateSpace::StateType>(0);
-                auto* start_se3 = start->as<ob::CompoundStateSpace::StateType>()->as<ob::SE3StateSpace::StateType>(0);
-                auto* curr_vel = st->as<ob::CompoundStateSpace::StateType>()->as<ob::RealVectorStateSpace::StateType>(1);
-                auto* start_vel = start->as<ob::CompoundStateSpace::StateType>()->as<ob::RealVectorStateSpace::StateType>(1);
-                start_se3->setXYZ(se3state->getX(), se3state->getY(), se3state->getZ());
-                start_se3->rotation().x = se3state->rotation().x;
-                start_se3->rotation().y = se3state->rotation().y;
-                start_se3->rotation().z = se3state->rotation().z;
-                start_se3->rotation().w = se3state->rotation().w;
-                start_vel->values[0] = curr_vel->values[0];
+                // Copy and display new starting state
+                si->copyState(start->as<ob::CompoundStateSpace::StateType>(), st);
+
                 // Change the start state
-                std::cout << "Starting from:" << start_se3->getX() << ", " << start_se3->getY() << ", " << start_se3->getZ() << std::endl;
                 ss.getProblemDefinition()->clearStartStates();
                 ss.setStartState(start);
-                // ss.getProblemDefinition()->clearSolutionPaths();
-                ob::PlannerTerminationCondition ptc_time = ob::timedPlannerTerminationCondition(path.getControlDuration(idx));
+                ss.getProblemDefinition()->clearSolutionPaths();
+                // oc::PathControl newSolnPath = makePath(si, path, idx, n_states);
+                // newSolnPath.print(std::cout);
+                // ss.getProblemDefinition()->addSolutionPath(path);
+                ob::PlannerTerminationCondition ptc_time = ob::timedPlannerTerminationCondition(planTime);
+                start.print(std::cout);
+                ss.getPlanner().get()->clear();
                 solved = ss.solve(ptc_time);
-                //
-                idx++;
+                if (solved && ss.haveExactSolutionPath())
+                    {
+                    path = ss.getSolutionPath();
+                    path.interpolate();
+                    std::cout << "Printing new path" << std::endl;
+                    savePath(ss, solved, planType, ws);
+                    // path.asGeometric().printAsMatrix(std::cout);
+                    accum_time = 0.0;
+                    durations = path.getControlDurations();
+                    segmentCost = path.asGeometric().cost(getThresholdPathLengthObj(ss.getSpaceInformation()));
+                    n_states = durations.size();
+                    std::cout << "n states remaining = " << n_states << std::endl;
+                    }
+
+                actual_time = 0.0;
+                // Get first path segment
+                idx = findPlanTime(durations, n_states, accum_time + dt, actual_time);
+                planTime = actual_time - accum_time;
+                accum_time += actual_time;
+                std::cout << "Act: " << actual_time << ", P: " << planTime << ", Acc: " << accum_time << std::endl;
+                // Define new start state
+                st = path.getState(idx);
+
                 }
 
             }

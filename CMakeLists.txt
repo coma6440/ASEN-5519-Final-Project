@@ -10,7 +10,8 @@ include_directories(
 	${FCL_INCLUDE_DIRS}
 )
 
-add_executable(FinalProject main.cpp MyPlanner.cpp MyPlanner.h MySampler.cpp MySampler.h)
+# add_executable(FinalProject main.cpp MyPlanner.cpp MyPlanner.h MySampler.cpp MySampler.h)
+add_executable(FinalProject main.cpp)
 
 target_link_libraries(FinalProject
 	${OMPL_LIBRARIES}
