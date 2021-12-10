@@ -3,11 +3,11 @@ obstacles:
   obs1:
     position: [5.0, -2.5, 0.0]
     orientation: [0.0, 0.0, 0.0, 1.0]
-    size: [0.5, 15.0, 20.0]
+    size: [0.5, 15.0, 25.0]
   obs2:
     position: [10.0, 2.5, 0.0]
     orientation: [0.0, 0.0, 0.0, 1.0]
-    size: [0.5, 15.0, 20.0]
+    size: [0.5, 15.0, 25.0]
 robot:
   size: [2.0, 1.0, 1.0]
   start_position: [0.0, 0.0, 0.0]
