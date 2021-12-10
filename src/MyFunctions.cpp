@@ -133,15 +133,8 @@ bool isStateValid(oc::SpaceInformation* si, const ob::State* state, std::vector<
         {
         if (fcl::collide(robot.get(), obs.get(), requestType, collisionResult))
             {
-            // if (count != 0)
-            //     {
-            //     std::cout << count << std::endl;
-            //     std::cout << "X = " << se3state->getX() << ", Y = " << se3state->getY() << ", Z = " << se3state->getZ() << std::endl;
-            //     }
-
             return false;
             }
-        // count++;
         }
     // Checks if state is in valid bounds
     return si->satisfiesBounds(state);
@@ -155,7 +148,7 @@ void saveGeometricPath(og::SimpleSetup ss, std::string fname)
     strftime(name, sizeof(name), s.c_str(), localtime(&now));
     std::ofstream file(name);
     og::PathGeometric path = ss.getSolutionPath();
-    path.interpolate();
+    // path.interpolate();
     path.printAsMatrix(file);
     file.close();
     }

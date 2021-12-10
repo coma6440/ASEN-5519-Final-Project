@@ -34,13 +34,15 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
         [si, obstacles, robot](const ob::State* state) { return isStateValid(si, state, obstacles, robot); });
 
 
-    // Complete the setup
+    si->setStateValidityCheckingResolution(0.00001); // 0.1%
+
+        // Complete the setup
     ss.setup();
 
-    si->setStateValidityCheckingResolution(0.0001); // 0.1%
+
 
     // Solve the planning problem
-    ob::PlannerStatus solved = ss.solve(5);
+    ob::PlannerStatus solved = ss.solve(10);
     if (solved)
         {
         saveGeometricPath(ss, ws);
