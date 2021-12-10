@@ -7,8 +7,7 @@
 - <s> Implement kinodynamic benchmarking. See https://ompl.kavrakilab.org/benchmark.html </s>
 - Can try restricting state space on the planner level in main.cpp
 - <s> Define final environments to use for planning. Can try creating maze like structure. Use simple block and w6 </s>
-- <s> Collect geometric results </s>
-- Define new naming scheme for solutions and figures
+- <s> Collect geometric results, used RRTconnect </s>
 - Start overleaf document
 - Collect results for current optimization objective
 - Try different optimization objective? Time would be a good one to use since the robot can rotate when stopped.

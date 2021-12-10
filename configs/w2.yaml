@@ -13,6 +13,6 @@ robot:
   start_position: [0.0, 0.0, 0.0]
   start_orientation: [0.0, 0.0, 0.0, 1.0]
 goal:
-  position: [14.5, 0.0, 0.0]
+  position: [14, 0.0, 0.0]
   orientation: [0.0, 0.0, 0.0, 1.0]
-  size: [1.0, 1.0, 1.0]
+  size: [2.0, 2.0, 2.0]
