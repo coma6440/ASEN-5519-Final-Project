@@ -32,6 +32,7 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
     ob::SpaceInformation* si = ss.getSpaceInformation().get();
     ss.setStateValidityChecker(
         [si, obstacles, robot](const ob::State* state) { return isStateValid(si, state, obstacles, robot); });
+    si->setStateValidityCheckingResolution(0.001); // 0.1%
 
     // Complete the setup
     ss.setup();
