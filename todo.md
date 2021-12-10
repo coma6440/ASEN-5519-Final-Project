@@ -1,5 +1,14 @@
 ## TODO
 - Adjust goal in .yaml files to be the true goal
 - Move plotting to MATLAB due to z-ordering issue in python. Can use convhull in MATLAB
+- Add goal regions to plots
 - Write psuedocode for informed SST
 - Implement kinodynamic benchmarking. See https://ompl.kavrakilab.org/benchmark.html
+- Can try restricting state space on the planner level in main.cpp
+- Define final environments to use for planning. Can try creating maze like structure. Use simple block and w6
+- Collect geometric results
+- Define new naming scheme for solutions and figures
+- Start overleaf document
+- Collect results for current optimization objective
+- Try different optimization objective? Time would be a good one to use since the robot can rotate when stopped.
+- Add check for only updating path if future expected cost is better than current cost
