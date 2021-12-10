@@ -10,12 +10,34 @@ include_directories(
 	${FCL_INCLUDE_DIRS}
 )
 
-# add_executable(FinalProject main.cpp MyPlanner.cpp MyPlanner.h MySampler.cpp MySampler.h)
-add_executable(FinalProject main.cpp)
+file(GLOB SOURCES src/*.cpp)
+file(GLOB LIB_SOURCES lib/*.cpp)
+file(GLOB LIB_HEADERS lib/*.h)
 
-target_link_libraries(FinalProject
+add_library(mylib ${LIB_SOURCES} ${LIB_HEADERS})
+
+add_executable(main src/main.cpp)
+add_executable(kinodynamic src/kinodynamic.cpp)
+add_executable(geometric src/geometric.cpp)
+
+target_link_libraries(main
 	${OMPL_LIBRARIES}
 	${FCL_LIBRARIES}
+	${mylib}
+	yaml-cpp
+)
+
+target_link_libraries(kinodynamic
+	${OMPL_LIBRARIES}
+	${FCL_LIBRARIES}
+	${mylib}
+	yaml-cpp
+)
+
+target_link_libraries(geometric
+	${OMPL_LIBRARIES}
+	${FCL_LIBRARIES}
+	${mylib}
 	yaml-cpp
 )
 
