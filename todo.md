@@ -1,7 +1,7 @@
 ## TODO
-- Adjust goal in .yaml files to be the true goal
+- <s>Adjust goal in .yaml files to be the true goal</s>
 - Move plotting to MATLAB due to z-ordering issue in python. Can use convhull in MATLAB
-- Add goal regions to plots
+- <s>Add goal regions to plots</s>
 - Write psuedocode for informed SST
 - Implement kinodynamic benchmarking. See https://ompl.kavrakilab.org/benchmark.html
 - Can try restricting state space on the planner level in main.cpp
