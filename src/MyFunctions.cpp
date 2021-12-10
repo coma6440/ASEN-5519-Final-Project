@@ -55,8 +55,6 @@ void GetEnvironment(std::string ws_name, std::vector<std::shared_ptr<fcl::Collis
     YAML::Node robot_node = config["robot"];
     YAML::Node obs_node = config["obstacles"];
 
-
-
     // Robot Definition
     std::vector<float> rob_size = robot_node["size"].as<std::vector<float>>();
     std::vector<float> start_pos = robot_node["start_position"].as<std::vector<float>>();

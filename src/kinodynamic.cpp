@@ -56,15 +56,15 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
     // Set state validity checking for this space
     oc::SpaceInformation* si = ss.getSpaceInformation().get();
     ss.setStateValidityChecker([si, obstacles, robot](const ob::State* state) { return isStateValid(si, state, obstacles, robot); });
-    si->setStateValidityCheckingResolution(0.01); // 1%
+    si->setStateValidityCheckingResolution(0.005); // 1%
 
     // Use the ODESolver to propagate the system. Call PostIntegration when done
     auto odeSolver(std::make_shared<oc::ODEBasicSolver<>>(ss.getSpaceInformation(), &DynamicsODE));
     ss.setStatePropagator(oc::ODESolver::getStatePropagator(odeSolver, &PostIntegration));
 
     // Set the planner
-    ob::PlannerPtr planner(new oc::SST(ss.getSpaceInformation()));
-    ss.setPlanner(planner);
+    // ob::PlannerPtr planner(new oc::SST(ss.getSpaceInformation()));
+    // ss.setPlanner(planner);
 
     // Solve the planning problem
     ob::PlannerStatus solved = ss.solve(120);
