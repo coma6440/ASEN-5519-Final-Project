@@ -60,7 +60,6 @@ void GetEnvironment(std::string ws_name, std::vector<std::shared_ptr<fcl::Collis
     // Robot Definition
     std::vector<float> rob_size = robot_node["size"].as<std::vector<float>>();
     std::vector<float> start_pos = robot_node["start_position"].as<std::vector<float>>();
-    std::vector<float> goal_pos = robot_node["goal_position"].as<std::vector<float>>();
 
     fcl::Vector3f rob_translation = fcl::Vector3f(start_pos[0], start_pos[1], start_pos[2]);
     robot = CollisionBox(rob_size[0], rob_size[1], rob_size[2], rob_translation);
