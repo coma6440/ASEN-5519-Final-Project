@@ -21,25 +21,24 @@ add_executable(main src/main.cpp)
 add_executable(kinodynamic src/kinodynamic.cpp)
 add_executable(geometric src/geometric.cpp)
 
+target_link_libraries(MyLib yaml-cpp)
+
 # Could loop this out?
 target_link_libraries(main
 	${OMPL_LIBRARIES}
 	${FCL_LIBRARIES}
-	yaml-cpp
 	MyLib
 )
 
 target_link_libraries(kinodynamic
 	${OMPL_LIBRARIES}
 	${FCL_LIBRARIES}
-	yaml-cpp
 	MyLib
 )
 
 target_link_libraries(geometric
 	${OMPL_LIBRARIES}
 	${FCL_LIBRARIES}
-	yaml-cpp
 	MyLib
 )
 

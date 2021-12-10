@@ -35,6 +35,8 @@ namespace oc = ompl::control;
 
 void DefineProblem(ob::StateSpacePtr& stateSpace, ob::StateSpacePtr& goalSpace);
 
+void GetEnvironment(std::string ws_name, std::vector<std::shared_ptr<fcl::CollisionObjectf>>& obstacles, std::shared_ptr<fcl::CollisionObjectf>& robot);
+
 std::shared_ptr<fcl::CollisionObjectf> CollisionBox(float l, float h, float w, fcl::Vector3f translation = fcl::Vector3f(0, 0, 0), fcl::Quaternionf rotation = fcl::Quaternionf(0, 0, 0, 1));
 
 bool isStateValid(ob::SpaceInformation* si, const ob::State* state, std::vector<std::shared_ptr<fcl::CollisionObjectf>> obstacles, std::shared_ptr<fcl::CollisionObjectf> robot);
@@ -43,7 +45,7 @@ bool isStateValid(oc::SpaceInformation* si, const ob::State* state, std::vector<
 
 void saveGeometricPath(og::SimpleSetup ss, std::string fname);
 
-void saveControlPath(oc::PathControl path, std::string fname, unsigned int count);
+void saveControlPath(oc::PathControl path, std::string fname);
 
 oc::PathControl makePath(const ob::SpaceInformationPtr& si, oc::PathControl prevPath, const unsigned int start, const unsigned int end);
 
