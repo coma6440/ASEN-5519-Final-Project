@@ -17,7 +17,7 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
     ob::StateSpacePtr goalSpace;
     DefineProblem(stateSpace, goalSpace);
 
-    stateSpace->as<ob::CompoundStateSpace>()->getSubspace(0)->as<ob::CompoundStateSpace>()->getSubspace(0)->setLongestValidSegmentFraction(0.0001);
+    stateSpace->as<ob::CompoundStateSpace>()->getSubspace(0)->as<ob::CompoundStateSpace>()->getSubspace(0)->setLongestValidSegmentFraction(0.001);
 
     // Control space setup
     auto cspace(std::make_shared<oc::RealVectorControlSpace>(stateSpace, 4));
@@ -67,6 +67,8 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
     // Set the planner
     // ob::PlannerPtr planner(new oc::SST(ss.getSpaceInformation()));
     // ss.setPlanner(planner);
+
+    ss.setup();
 
     // Solve the planning problem
     ob::PlannerStatus solved = ss.solve(120);
