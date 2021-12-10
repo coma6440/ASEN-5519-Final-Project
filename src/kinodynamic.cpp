@@ -17,6 +17,8 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
     ob::StateSpacePtr goalSpace;
     DefineProblem(stateSpace, goalSpace);
 
+    stateSpace->as<ob::CompoundStateSpace>()->getSubspace(0)->as<ob::CompoundStateSpace>()->getSubspace(0)->setLongestValidSegmentFraction(0.01);
+
     // Control space setup
     auto cspace(std::make_shared<oc::RealVectorControlSpace>(stateSpace, 4));
 
@@ -56,7 +58,7 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
     // Set state validity checking for this space
     oc::SpaceInformation* si = ss.getSpaceInformation().get();
     ss.setStateValidityChecker([si, obstacles, robot](const ob::State* state) { return isStateValid(si, state, obstacles, robot); });
-    si->setStateValidityCheckingResolution(0.01); // 1%
+    // si->setStateValidityCheckingResolution(0.001); // 1%
 
     // Use the ODESolver to propagate the system. Call PostIntegration when done
     auto odeSolver(std::make_shared<oc::ODEBasicSolver<>>(ss.getSpaceInformation(), &DynamicsODE));
