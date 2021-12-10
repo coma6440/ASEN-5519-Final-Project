@@ -5,7 +5,7 @@
 - Write psuedocode for informed SST
 - Implement kinodynamic benchmarking. See https://ompl.kavrakilab.org/benchmark.html
 - Can try restricting state space on the planner level in main.cpp
-- Define final environments to use for planning. Can try creating maze like structure. Use simple block and w6
+- <s> Define final environments to use for planning. Can try creating maze like structure. Use simple block and w6 </s>
 - Collect geometric results
 - Define new naming scheme for solutions and figures
 - Start overleaf document
