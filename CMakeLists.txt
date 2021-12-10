@@ -8,37 +8,39 @@ find_package(yaml-cpp REQUIRED)
 include_directories(
 	${OMPL_INCLUDE_DIRS}
 	${FCL_INCLUDE_DIRS}
+	${PROJECT_SOURCE_DIR}/include
+	${PROJECT_SOURCE_DIR}/src
 )
 
-file(GLOB SOURCES src/*.cpp)
-file(GLOB LIB_SOURCES lib/*.cpp)
-file(GLOB LIB_HEADERS lib/*.h)
+set(FUNC_LIBS include/MyFunctions.h include/MyPlanner.h include/MySampler.h)
+set(FUNC_SRCS src/MyFunctions.cpp src/MyPlanner.cpp src/MySampler.cpp)
 
-add_library(mylib ${LIB_SOURCES} ${LIB_HEADERS})
+add_library(MyLib ${FUNC_SRCS} ${FUNC_LIBS})
 
 add_executable(main src/main.cpp)
 add_executable(kinodynamic src/kinodynamic.cpp)
 add_executable(geometric src/geometric.cpp)
 
+# Could loop this out?
 target_link_libraries(main
 	${OMPL_LIBRARIES}
 	${FCL_LIBRARIES}
-	${mylib}
 	yaml-cpp
+	MyLib
 )
 
 target_link_libraries(kinodynamic
 	${OMPL_LIBRARIES}
 	${FCL_LIBRARIES}
-	${mylib}
 	yaml-cpp
+	MyLib
 )
 
 target_link_libraries(geometric
 	${OMPL_LIBRARIES}
 	${FCL_LIBRARIES}
-	${mylib}
 	yaml-cpp
+	MyLib
 )
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
