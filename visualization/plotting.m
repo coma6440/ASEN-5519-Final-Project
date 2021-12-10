@@ -4,7 +4,8 @@ clear
 clc
 addpath(genpath('../lib/yaml'));
 %% Load in files
-sol_folder = "../solutions/kinodynamic";
+p_type = "geometric";
+sol_folder = "../solutions/" + p_type;
 sol_listing = dir(sol_folder);
 sol_listing([sol_listing.isdir]) = [];
 
@@ -13,26 +14,15 @@ for i = 1:length(sol_listing)
     env = env{1}; % Get just the workspace
     env = ReadYaml(['../configs/', env ,'.yaml']);
     A = readmatrix(sol_folder + filesep + sol_listing(i).name, 'OutputType', 'double');
+    name = strsplit(sol_listing(i).name,".");
+    name = name{1};
+    dir_name = p_type + filesep + name;
+    mkdir(dir_name);
     
-    plot_position(A)
-    plot_orientation(A)
-    
-    figure
-    plot3(A(:,1), A(:,2), A(:,3),'k', 'LineWidth', 2)
-    grid on
-    xlim([0,15])
-    ylim([-10,10])
-    zlim([-10,10])
-    xlabel("X Position")
-    ylabel("Y Position")
-    zlabel("Z Position")
-    
-    hold on
-    plot_obstacles(env.obstacles)
-    plot_goal(env.goal)
+    plot_position(A, dir_name + filesep + "position")
+    plot_orientation(A, dir_name + filesep + "orientation")
+    plot_trajectory(A, env, dir_name + filesep + "trajectory") 
 end
-
-
 
 %% Helper Functions
 function c = cuboid(size, position, orientation)
@@ -71,9 +61,15 @@ c = cuboid(s, p, q);
 trisurf(k,c(:,1),c(:,2),c(:,3),'FaceColor','green','FaceAlpha', 0.4)
 end
 
-function plot_position(A)
+function plot_robot(s, p, q)
+c = cuboid(s, p, q);
+[k,~] = convhull(c(:,1),c(:,2),c(:,3),'Simplify',true);
+trisurf(k,c(:,1),c(:,2),c(:,3),'FaceColor','blue','FaceAlpha', 0.4)
+end
+
+function plot_position(A, fname)
 t = cumsum(A(:,end));
-figure
+f = figure('Visible', 'Off');
 tiledlayout(4,1);
 nexttile
 plot(t,A(:,1))
@@ -95,11 +91,15 @@ plot(t,A(:,8))
 grid on
 ylabel("Speed")
 xlabel("Time [s]")
+saveas(f, fname + ".png");
+saveas(f, fname + ".fig");
+close
 end
 
-function plot_orientation(A)
+function plot_orientation(A, fname)
 t = cumsum(A(:,end));
-figure
+f = figure('Visible', 'Off');
+
 tiledlayout(4,1)
 nexttile
 plot(t,A(:,4))
@@ -121,4 +121,29 @@ plot(t,A(:,7))
 grid on
 xlabel("Time [s]")
 ylabel("q_w")
+
+saveas(f, fname + ".png");
+saveas(f, fname + ".fig");
+close
+end
+
+function plot_trajectory(A, env, fname)
+% f = figure('Visible', 'Off');
+f = figure();
+plot3(A(:,1), A(:,2), A(:,3),'k', 'LineWidth', 2)
+grid on
+xlim([0,15])
+ylim([-10,10])
+zlim([-10,10])
+xlabel("X Position")
+ylabel("Y Position")
+zlabel("Z Position")
+
+hold on
+plot_obstacles(env.obstacles)
+plot_goal(env.goal)
+plot_robot(cell2mat(env.robot.size), A(end,1:3), A(end, 4:7))
+saveas(f, fname + ".png");
+saveas(f, fname + ".fig");
+close
 end
