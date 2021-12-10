@@ -3,6 +3,7 @@
 - Move plotting to MATLAB due to z-ordering issue in python. Can use convhull in MATLAB
 - <s>Add goal regions to plots</s>
 - Write psuedocode for informed SST
+- Figure out why kinodynamic is moving through obstacles and implement a fix.
 - Implement kinodynamic benchmarking. See https://ompl.kavrakilab.org/benchmark.html
 - Can try restricting state space on the planner level in main.cpp
 - <s> Define final environments to use for planning. Can try creating maze like structure. Use simple block and w6 </s>

@@ -20,6 +20,7 @@ add_library(MyLib ${FUNC_SRCS} ${FUNC_LIBS})
 add_executable(main src/main.cpp)
 add_executable(kinodynamic src/kinodynamic.cpp)
 add_executable(geometric src/geometric.cpp)
+add_executable(benchmark src/benchmark.cpp)
 
 target_link_libraries(MyLib yaml-cpp)
 
@@ -37,6 +38,12 @@ target_link_libraries(kinodynamic
 )
 
 target_link_libraries(geometric
+	${OMPL_LIBRARIES}
+	${FCL_LIBRARIES}
+	MyLib
+)
+
+target_link_libraries(benchmark
 	${OMPL_LIBRARIES}
 	${FCL_LIBRARIES}
 	MyLib

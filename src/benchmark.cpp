@@ -1,5 +1,10 @@
 /* OMPL */
+#include "ompl/tools/benchmark/Benchmark.h"
 #include <ompl/control/planners/sst/SST.h>
+#include <ompl/control/planners/rrt/RRT.h>
+#include <ompl/control/planners/est/EST.h>
+#include <ompl/control/planners/kpiece/KPIECE1.h>
+#include <ompl/base/ProjectionEvaluator.h>
 
 /* Static Library */
 #include "MyFunctions.h"
@@ -8,6 +13,7 @@
 namespace ob = ompl::base;
 namespace oc = ompl::control;
 namespace og = ompl::geometric;
+namespace ot = ompl::tools;
 
 
 void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obstacles, std::shared_ptr<fcl::CollisionObjectf> robot, std::string ws)
@@ -16,6 +22,8 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
     ob::StateSpacePtr stateSpace;
     ob::StateSpacePtr goalSpace;
     DefineProblem(stateSpace, goalSpace);
+
+
 
     // stateSpace->as<ob::CompoundStateSpace>()->getSubspace(0)->as<ob::CompoundStateSpace>()->getSubspace(0)->setLongestValidSegmentFraction(0.001);
 
@@ -64,22 +72,30 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
     auto odeSolver(std::make_shared<oc::ODEBasicSolver<>>(ss.getSpaceInformation(), &DynamicsODE));
     ss.setStatePropagator(oc::ODESolver::getStatePropagator(odeSolver, &PostIntegration));
 
-    // Set the planner
-    ob::PlannerPtr planner(new oc::SST(ss.getSpaceInformation()));
-    ss.setPlanner(planner);
+    stateSpace->registerDefaultProjection(ob::ProjectionEvaluatorPtr(new ob::SubspaceProjectionEvaluator(stateSpace.get(), 0)));
 
+    // Complete the setup
     ss.setup();
 
+
+
+    // Benchmarking
+    ot::Benchmark b(ss, "my experiement");
+
+    b.addPlanner(ob::PlannerPtr(new oc::SST(ss.getSpaceInformation())));
+    b.addPlanner(ob::PlannerPtr(new oc::RRT(ss.getSpaceInformation())));
+    b.addPlanner(ob::PlannerPtr(new oc::KPIECE1(ss.getSpaceInformation())));
+    b.addPlanner(ob::PlannerPtr(new oc::EST(ss.getSpaceInformation())));
     // Solve the planning problem
-    ob::PlannerStatus solved = ss.solve(400);
-    if (solved && ss.haveExactSolutionPath())
-        {
-        // TODO: Save the path
-        oc::PathControl path = ss.getSolutionPath();
-        // path.interpolate();
-        saveControlPath(path, ws);
-        }
-    ss.getSolutionPath().printAsMatrix(std::cout);
+    ot::Benchmark::Request req;
+    req.maxTime = 1.0;
+    req.maxMem = 1000.0;
+    req.runCount = 10;
+    req.displayProgress = true;
+    b.benchmark(req);
+
+    // This will generate a file of the form ompl_host_time.log
+    b.saveResultsToFile();
     }
 
 

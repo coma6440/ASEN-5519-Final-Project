@@ -121,19 +121,27 @@ bool isStateValid(oc::SpaceInformation* si, const ob::State* state, std::vector<
     const auto* pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
     const auto* rot = se3state->as<ob::SO3StateSpace::StateType>(1);
     const auto* vel = state->as<ob::CompoundStateSpace::StateType>()->as<ob::RealVectorStateSpace::StateType>(1);
-    // std::cout << "X = " << se3state->getX() << ", Y = " << se3state->getY() << ", Z = " << se3state->getZ() << std::endl;
+
     fcl::Vector3f translation(pos->values[0], pos->values[1], pos->values[2]);
     fcl::Quaternionf rotation(rot->x, rot->y, rot->z, rot->w);
     fcl::CollisionRequestf requestType(1, false, 1, false);
     fcl::CollisionResultf collisionResult;
     robot->setTransform(rotation, translation);
     // Checks that there are no collisions
+    // unsigned int count = 0;
     for (std::shared_ptr<fcl::CollisionObjectf> obs : obstacles)
         {
         if (fcl::collide(robot.get(), obs.get(), requestType, collisionResult))
             {
+            // if (count != 0)
+            //     {
+            //     std::cout << count << std::endl;
+            //     std::cout << "X = " << se3state->getX() << ", Y = " << se3state->getY() << ", Z = " << se3state->getZ() << std::endl;
+            //     }
+
             return false;
             }
+        // count++;
         }
     // Checks if state is in valid bounds
     return si->satisfiesBounds(state);
@@ -160,7 +168,7 @@ void saveControlPath(oc::PathControl path, std::string fname)
     std::string s = "../solutions/kinodynamic/" + fname + "_%Y%m%d%H%M%S.txt";
     strftime(name, sizeof(name), s.c_str(), localtime(&now));
     std::ofstream file(name);
-    path.interpolate();
+    // path.interpolate();
     path.printAsMatrix(file);
     file.close();
     }
