@@ -4,7 +4,7 @@ clear
 clc
 addpath(genpath('../lib/yaml'));
 %% Load in files
-p_type = "geometric";
+p_type = "kinodynamic";
 sol_folder = "../solutions/" + p_type;
 sol_listing = dir(sol_folder);
 sol_listing([sol_listing.isdir]) = [];
