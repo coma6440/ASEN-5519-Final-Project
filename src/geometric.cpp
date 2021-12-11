@@ -36,9 +36,6 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
         [si, obstacles, robot](const ob::State* state) { return isStateValid(si, state, obstacles, robot); });
 
 
-    // si->setStateValidityCheckingResolution(0.00001); // 0.1%
-    // stateSpace->as<ob::CompoundStateSpace>()->getSubspace(0)->as<ob::CompoundStateSpace>()->getSubspace(0)->setLongestValidSegmentFraction(1e-6);
-
     // stateSpace->registerDefaultProjection(ob::ProjectionEvaluatorPtr(new ob::SubspaceProjectionEvaluator(stateSpace.get(), 0)));
 
     ob::PlannerPtr planner(new og::RRTConnect(ss.getSpaceInformation()));
