@@ -42,7 +42,7 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
     // stateSpace->registerDefaultProjection(ob::ProjectionEvaluatorPtr(new ob::SubspaceProjectionEvaluator(stateSpace.get(), 0)));
 
     ob::PlannerPtr planner(new og::RRTConnect(ss.getSpaceInformation()));
-    planner->as<og::RRTConnect>()->setRange(1);
+    planner->as<og::RRTConnect>()->setRange(0.5);
     ss.setPlanner(planner);
 
     // Complete the setup
@@ -50,7 +50,7 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
 
 
     // Solve the planning problem
-    ob::PlannerStatus solved = ss.solve(40);
+    ob::PlannerStatus solved = ss.solve(5);
     if (solved)
         {
         saveGeometricPath(ss, ws);
