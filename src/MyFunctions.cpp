@@ -126,17 +126,23 @@ bool isStateValid(oc::SpaceInformation* si, const ob::State* state, std::vector<
     const auto* rot = se3state->as<ob::SO3StateSpace::StateType>(1);
     const auto* vel = state->as<ob::CompoundStateSpace::StateType>()->as<ob::RealVectorStateSpace::StateType>(1);
 
-    // fcl::Vector3f translation(pos->values[0], pos->values[1], pos->values[2]);
+    fcl::Vector3f translation(pos->values[0], pos->values[1], pos->values[2]);
     float x = pos->values[0];
     float y = pos->values[1];
     float z = pos->values[2];
-    // fcl::Quaternionf rotation(rot->x, rot->y, rot->z, rot->w);
+    fcl::Quaternionf rotation(rot->x, rot->y, rot->z, rot->w);
     // fcl::CollisionRequestf requestType(1, true, 1, false);
     // fcl::CollisionResultf collisionResult;
-    // robot->setTransform(rotation, translation);
+    robot->setTransform(rotation, translation);
     // Checks that there are no collisions
     // unsigned int count = 0;
-    // for (std::shared_ptr<fcl::CollisionObjectf> obs : obstacles)
+    for (std::shared_ptr<fcl::CollisionObjectf> obs : obstacles)
+        {
+        if (robot->getAABB().overlap(obs->getAABB()))
+            {
+            return false;
+            }
+        }
     //     {
     //     if (fcl::collide(robot.get(), obs.get(), requestType, collisionResult))
     //         {
@@ -160,10 +166,10 @@ bool isStateValid(oc::SpaceInformation* si, const ob::State* state, std::vector<
     //         }
     //     count++;
     //     }
-    if ((((y < -3) || (y > 3)) || ((z > 3) || (z < -3))) && ((x >= 6.5) && (x <= 8.5)))
-        {
-        return false;
-        }
+    // if ((((y < -3) || (y > 3)) || ((z > 3) || (z < -3))) && ((x >= 6.5) && (x <= 8.5)))
+    //     {
+    //     return false;
+    //     }
     // Checks if state is in valid bounds
     return si->satisfiesBounds(state);
     }
