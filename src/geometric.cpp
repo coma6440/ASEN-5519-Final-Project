@@ -36,15 +36,15 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
         [si, obstacles, robot](const ob::State* state) { return isStateValid(si, state, obstacles, robot); });
 
 
+    // std::cout << ss.getStateValidityChecker()->isValid(start.get()) << std::endl;
     // stateSpace->registerDefaultProjection(ob::ProjectionEvaluatorPtr(new ob::SubspaceProjectionEvaluator(stateSpace.get(), 0)));
 
     ob::PlannerPtr planner(new og::RRTConnect(ss.getSpaceInformation()));
-    planner->as<og::RRTConnect>()->setRange(0.1);
     ss.setPlanner(planner);
+
 
     // Complete the setup
     ss.setup();
-
 
     // Solve the planning problem
     ob::PlannerStatus solved = ss.solve(5);

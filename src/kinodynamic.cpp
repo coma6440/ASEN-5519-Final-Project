@@ -58,25 +58,20 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
     // Set state validity checking for this space
     oc::SpaceInformation* si = ss.getSpaceInformation().get();
     ss.setStateValidityChecker([si, obstacles, robot](const ob::State* state) { return isStateValid(si, state, obstacles, robot); });
-    // This is needed for third environment
-    // si->setStateValidityCheckingResolution(0.01); // 1%
-    // stateSpace->as<ob::CompoundStateSpace>()->getSubspace(0)->as<ob::CompoundStateSpace>()->getSubspace(0)->setLongestValidSegmentFraction(1e-2);
 
     // Use the ODESolver to propagate the system. Call PostIntegration when done
     auto odeSolver(std::make_shared<oc::ODEBasicSolver<>>(ss.getSpaceInformation(), &DynamicsODE));
     ss.setStatePropagator(oc::ODESolver::getStatePropagator(odeSolver, &PostIntegration));
-    // ss.getSpaceInformation()->setPropagationStepSize(0.1);
-    // ss.getSpaceInformation()->setMinMaxControlDuration(1, 5);
 
     // Set the planner
     ob::PlannerPtr planner(new oc::SST(ss.getSpaceInformation()));
     ss.setPlanner(planner);
 
+    // Complete setup
     ss.setup();
 
-
     // Solve the planning problem
-    ob::PlannerStatus solved = ss.solve(180);
+    ob::PlannerStatus solved = ss.solve(45);
     if (solved && ss.haveExactSolutionPath())
         {
         // TODO: Save the path
@@ -85,7 +80,6 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
         saveControlPath(path, ws);
         }
     }
-
 
 int main(int argc, char* argv[])
     {

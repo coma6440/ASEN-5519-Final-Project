@@ -2,8 +2,9 @@
 - <s>Adjust goal in .yaml files to be the true goal</s>
 - Move plotting to MATLAB due to z-ordering issue in python. Can use convhull in MATLAB
 - <s>Add goal regions to plots</s>
+- Add continuous collision check if possible
 - Write psuedocode for informed SST
-- Figure out why planners are moving through obstacles. Seems to be related to fcl and having an obstacle in the middle?
+- Figure out why planners are moving through obstacles. Seems to be related to fcl and having an obstacle in the middle? Objects are rotated.
 - <s> Implement kinodynamic benchmarking. See https://ompl.kavrakilab.org/benchmark.html </s>
 - Can try restricting state space on the planner level in main.cpp
 - <s> Define final environments to use for planning. Can try creating maze like structure. Use simple block and w6 </s>

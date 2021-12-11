@@ -1,6 +1,7 @@
 #include "MyFunctions.h"
 #include <fstream>
 #include <iostream>
+#include <fcl/narrowphase/collision.h>
 
 void DefineProblem(ob::StateSpacePtr& stateSpace, ob::StateSpacePtr& goalSpace)
     {
@@ -76,23 +77,22 @@ void GetEnvironment(std::string ws_name, std::vector<std::shared_ptr<fcl::Collis
             {
             obs = obs_node[it->first.as<std::string>()];
             obs_pos = obs["position"].as<std::vector<float>>();
+
             obs_orient = obs["orientation"].as<std::vector<float>>();
             obs_size = obs["size"].as<std::vector<float>>();
-            std::cout << "P: " << obs_pos[0] << " " << obs_pos[1] << " " << obs_pos[2] << std::endl;
-            std::cout << "S: " << obs_size[0] << " " << obs_size[1] << " " << obs_size[2] << std::endl;
             fcl::Vector3f obs_translation = fcl::Vector3f(obs_pos[0], obs_pos[1], obs_pos[2]);
-            fcl::Quaternionf obs_rotation = fcl::Quaternionf(obs_orient[0], obs_orient[1], obs_orient[2], obs_orient[3]);
+            fcl::Quaternionf obs_rotation = fcl::Quaternionf(obs_orient[3], obs_orient[0], obs_orient[1], obs_orient[2]);
             obstacles.push_back(CollisionBox(obs_size[0], obs_size[1], obs_size[2], obs_translation, obs_rotation));
             }
         }
     }
 
-std::shared_ptr<fcl::CollisionObjectf> CollisionBox(float l, float h, float w, fcl::Vector3f translation, fcl::Quaternionf rotation)
+std::shared_ptr<fcl::CollisionObjectf> CollisionBox(float l, float w, float h, fcl::Vector3f translation, fcl::Quaternionf rotation)
     {
     std::shared_ptr<fcl::CollisionGeometryf> geometry(new fcl::Boxf(l, w, h));
-    fcl::CollisionObjectf collision_object(geometry, fcl::Transform3f());
+    fcl::CollisionObjectf collision_object(geometry);
+    collision_object.setTransform(rotation, translation);
     auto obj = std::make_shared<fcl::CollisionObjectf>(collision_object);
-    obj->setTransform(rotation, translation);
     return obj;
     }
 
@@ -102,15 +102,18 @@ bool isStateValid(ob::SpaceInformation* si, const ob::State* state, std::vector<
     const auto* pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
     const auto* rot = se3state->as<ob::SO3StateSpace::StateType>(1);
     const auto* vel = state->as<ob::CompoundStateSpace::StateType>()->as<ob::RealVectorStateSpace::StateType>(1);
+
     fcl::Vector3f translation(pos->values[0], pos->values[1], pos->values[2]);
-    fcl::Quaternionf rotation(rot->x, rot->y, rot->z, rot->w);
-    fcl::CollisionRequestf requestType(1, false, 1, false);
-    fcl::CollisionResultf collisionResult;
-    robot->setTransform(rotation, translation);
+    fcl::Quaternionf rotation(rot->w, rot->x, rot->y, rot->z);
+    robot.get()->setTransform(rotation, translation);
     // Checks that there are no collisions
     for (std::shared_ptr<fcl::CollisionObjectf> obs : obstacles)
         {
-        if (fcl::collide(robot.get(), obs.get(), requestType, collisionResult))
+        fcl::CollisionRequestf request;
+        // result will be returned via the collision result structure
+        fcl::CollisionResultf result;
+        // perform collision test
+        if (fcl::collide(robot.get(), obs.get(), request, result))
             {
             return false;
             }
@@ -127,49 +130,21 @@ bool isStateValid(oc::SpaceInformation* si, const ob::State* state, std::vector<
     const auto* vel = state->as<ob::CompoundStateSpace::StateType>()->as<ob::RealVectorStateSpace::StateType>(1);
 
     fcl::Vector3f translation(pos->values[0], pos->values[1], pos->values[2]);
-    float x = pos->values[0];
-    float y = pos->values[1];
-    float z = pos->values[2];
-    fcl::Quaternionf rotation(rot->x, rot->y, rot->z, rot->w);
-    // fcl::CollisionRequestf requestType(1, true, 1, false);
-    // fcl::CollisionResultf collisionResult;
+    fcl::Quaternionf rotation(rot->w, rot->x, rot->y, rot->z);
     robot->setTransform(rotation, translation);
     // Checks that there are no collisions
-    // unsigned int count = 0;
     for (std::shared_ptr<fcl::CollisionObjectf> obs : obstacles)
         {
-        if (robot->getAABB().overlap(obs->getAABB()))
+        fcl::CollisionRequestf request;
+        // result will be returned via the collision result structure
+        fcl::CollisionResultf result;
+        // perform collision test
+        if (fcl::collide(robot.get(), obs.get(), request, result))
             {
             return false;
             }
         }
-    //     {
-    //     if (fcl::collide(robot.get(), obs.get(), requestType, collisionResult))
-    //         {
-    //         // std::cout << collisionResult.isCollision() << std::endl;
-    //         // fcl::Vector3f t = obs.get()->getTranslation();
-    //         // fcl::Vector3f r = robot.get()->getTranslation();
-    //         // std::cout << t[0] << " " << t[1] << " " << t[2] << ";" << std::endl;
-    //         // std::cout << r[0] << " " << r[1] << " " << r[2] << ";" << std::endl;
-    //         // std::ofstream myfile;
-    //         // myfile.open("example.txt");
-    //         // fcl::Vector3f pos = collisionResult.getContact(0).pos;
-    //         // myfile << pos[0] << " " << pos[1] << " " << pos[2] << ";" << std::endl;
-    //         // myfile.close();
 
-    //         // if (translation[1] < 3 && translation[1] > -3 && translation[2] < 3 && translation[2] > -3)
-    //         //     {
-    //         //     std::cout << translation[0] << " " << translation[1] << " " << translation[2] << ";" << std::endl;
-    //         //     }
-
-    //         return false;
-    //         }
-    //     count++;
-    //     }
-    // if ((((y < -3) || (y > 3)) || ((z > 3) || (z < -3))) && ((x >= 6.5) && (x <= 8.5)))
-    //     {
-    //     return false;
-    //     }
     // Checks if state is in valid bounds
     return si->satisfiesBounds(state);
     }
@@ -182,20 +157,19 @@ void saveGeometricPath(og::SimpleSetup ss, std::string fname)
     strftime(name, sizeof(name), s.c_str(), localtime(&now));
     std::ofstream file(name);
     og::PathGeometric path = ss.getSolutionPath();
-    // path.interpolate();
+    path.interpolate();
     path.printAsMatrix(file);
     file.close();
     }
 
 void saveControlPath(oc::PathControl path, std::string fname)
     {
-    // path.interpolate();
     static char name[50];
     time_t now = time(0);
     std::string s = "../solutions/kinodynamic/" + fname + "_%Y%m%d%H%M%S.txt";
     strftime(name, sizeof(name), s.c_str(), localtime(&now));
     std::ofstream file(name);
-    // path.interpolate();
+    path.interpolate();
     path.printAsMatrix(file);
     file.close();
     }

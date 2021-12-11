@@ -37,7 +37,7 @@ void DefineProblem(ob::StateSpacePtr& stateSpace, ob::StateSpacePtr& goalSpace);
 
 void GetEnvironment(std::string ws_name, std::vector<std::shared_ptr<fcl::CollisionObjectf>>& obstacles, std::shared_ptr<fcl::CollisionObjectf>& robot);
 
-std::shared_ptr<fcl::CollisionObjectf> CollisionBox(float l, float h, float w, fcl::Vector3f translation = fcl::Vector3f(0, 0, 0), fcl::Quaternionf rotation = fcl::Quaternionf(0, 0, 0, 1));
+std::shared_ptr<fcl::CollisionObjectf> CollisionBox(float l, float w, float h, fcl::Vector3f translation = fcl::Vector3f(0, 0, 0), fcl::Quaternionf rotation = fcl::Quaternionf(0, 0, 0, 1));
 
 bool isStateValid(ob::SpaceInformation* si, const ob::State* state, std::vector<std::shared_ptr<fcl::CollisionObjectf>> obstacles, std::shared_ptr<fcl::CollisionObjectf> robot);
 
