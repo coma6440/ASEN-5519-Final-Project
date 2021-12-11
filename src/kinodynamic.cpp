@@ -65,7 +65,7 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
     // Use the ODESolver to propagate the system. Call PostIntegration when done
     auto odeSolver(std::make_shared<oc::ODEBasicSolver<>>(ss.getSpaceInformation(), &DynamicsODE));
     ss.setStatePropagator(oc::ODESolver::getStatePropagator(odeSolver, &PostIntegration));
-    ss.getSpaceInformation()->setPropagationStepSize(0.1);
+    // ss.getSpaceInformation()->setPropagationStepSize(0.1);
     // ss.getSpaceInformation()->setMinMaxControlDuration(1, 5);
 
     // Set the planner
