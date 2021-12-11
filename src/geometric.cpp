@@ -1,5 +1,6 @@
 #include "MyFunctions.h"
 #include <ompl/geometric/planners/kpiece/KPIECE1.h>
+#include <ompl/geometric/planners/rrt/RRTConnect.h>
 
 /* Namespaces */
 namespace ob = ompl::base;
@@ -38,9 +39,10 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
     // si->setStateValidityCheckingResolution(0.00001); // 0.1%
     // stateSpace->as<ob::CompoundStateSpace>()->getSubspace(0)->as<ob::CompoundStateSpace>()->getSubspace(0)->setLongestValidSegmentFraction(1e-6);
 
-    stateSpace->registerDefaultProjection(ob::ProjectionEvaluatorPtr(new ob::SubspaceProjectionEvaluator(stateSpace.get(), 0)));
+    // stateSpace->registerDefaultProjection(ob::ProjectionEvaluatorPtr(new ob::SubspaceProjectionEvaluator(stateSpace.get(), 0)));
 
-    ob::PlannerPtr planner(new og::KPIECE1(ss.getSpaceInformation()));
+    ob::PlannerPtr planner(new og::RRTConnect(ss.getSpaceInformation()));
+    planner->as<og::RRTConnect>()->setRange(1);
     ss.setPlanner(planner);
 
     // Complete the setup
@@ -48,7 +50,7 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
 
 
     // Solve the planning problem
-    ob::PlannerStatus solved = ss.solve(20);
+    ob::PlannerStatus solved = ss.solve(40);
     if (solved)
         {
         saveGeometricPath(ss, ws);
