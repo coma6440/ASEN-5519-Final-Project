@@ -74,6 +74,7 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
 
     ss.setup();
 
+
     // Solve the planning problem
     ob::PlannerStatus solved = ss.solve(180);
     if (solved && ss.haveExactSolutionPath())

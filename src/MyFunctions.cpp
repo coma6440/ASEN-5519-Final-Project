@@ -1,4 +1,6 @@
 #include "MyFunctions.h"
+#include <fstream>
+#include <iostream>
 
 void DefineProblem(ob::StateSpacePtr& stateSpace, ob::StateSpacePtr& goalSpace)
     {
@@ -76,6 +78,8 @@ void GetEnvironment(std::string ws_name, std::vector<std::shared_ptr<fcl::Collis
             obs_pos = obs["position"].as<std::vector<float>>();
             obs_orient = obs["orientation"].as<std::vector<float>>();
             obs_size = obs["size"].as<std::vector<float>>();
+            std::cout << "P: " << obs_pos[0] << " " << obs_pos[1] << " " << obs_pos[2] << std::endl;
+            std::cout << "S: " << obs_size[0] << " " << obs_size[1] << " " << obs_size[2] << std::endl;
             fcl::Vector3f obs_translation = fcl::Vector3f(obs_pos[0], obs_pos[1], obs_pos[2]);
             fcl::Quaternionf obs_rotation = fcl::Quaternionf(obs_orient[0], obs_orient[1], obs_orient[2], obs_orient[3]);
             obstacles.push_back(CollisionBox(obs_size[0], obs_size[1], obs_size[2], obs_translation, obs_rotation));
@@ -122,19 +126,43 @@ bool isStateValid(oc::SpaceInformation* si, const ob::State* state, std::vector<
     const auto* rot = se3state->as<ob::SO3StateSpace::StateType>(1);
     const auto* vel = state->as<ob::CompoundStateSpace::StateType>()->as<ob::RealVectorStateSpace::StateType>(1);
 
-    fcl::Vector3f translation(pos->values[0], pos->values[1], pos->values[2]);
-    fcl::Quaternionf rotation(rot->x, rot->y, rot->z, rot->w);
-    fcl::CollisionRequestf requestType(1, false, 1, false);
-    fcl::CollisionResultf collisionResult;
-    robot->setTransform(rotation, translation);
+    // fcl::Vector3f translation(pos->values[0], pos->values[1], pos->values[2]);
+    float x = pos->values[0];
+    float y = pos->values[1];
+    float z = pos->values[2];
+    // fcl::Quaternionf rotation(rot->x, rot->y, rot->z, rot->w);
+    // fcl::CollisionRequestf requestType(1, true, 1, false);
+    // fcl::CollisionResultf collisionResult;
+    // robot->setTransform(rotation, translation);
     // Checks that there are no collisions
     // unsigned int count = 0;
-    for (std::shared_ptr<fcl::CollisionObjectf> obs : obstacles)
+    // for (std::shared_ptr<fcl::CollisionObjectf> obs : obstacles)
+    //     {
+    //     if (fcl::collide(robot.get(), obs.get(), requestType, collisionResult))
+    //         {
+    //         // std::cout << collisionResult.isCollision() << std::endl;
+    //         // fcl::Vector3f t = obs.get()->getTranslation();
+    //         // fcl::Vector3f r = robot.get()->getTranslation();
+    //         // std::cout << t[0] << " " << t[1] << " " << t[2] << ";" << std::endl;
+    //         // std::cout << r[0] << " " << r[1] << " " << r[2] << ";" << std::endl;
+    //         // std::ofstream myfile;
+    //         // myfile.open("example.txt");
+    //         // fcl::Vector3f pos = collisionResult.getContact(0).pos;
+    //         // myfile << pos[0] << " " << pos[1] << " " << pos[2] << ";" << std::endl;
+    //         // myfile.close();
+
+    //         // if (translation[1] < 3 && translation[1] > -3 && translation[2] < 3 && translation[2] > -3)
+    //         //     {
+    //         //     std::cout << translation[0] << " " << translation[1] << " " << translation[2] << ";" << std::endl;
+    //         //     }
+
+    //         return false;
+    //         }
+    //     count++;
+    //     }
+    if ((((y < -3) || (y > 3)) || ((z > 3) || (z < -3))) && ((x >= 6.5) && (x <= 8.5)))
         {
-        if (fcl::collide(robot.get(), obs.get(), requestType, collisionResult))
-            {
-            return false;
-            }
+        return false;
         }
     // Checks if state is in valid bounds
     return si->satisfiesBounds(state);

@@ -3,7 +3,7 @@
 - Move plotting to MATLAB due to z-ordering issue in python. Can use convhull in MATLAB
 - <s>Add goal regions to plots</s>
 - Write psuedocode for informed SST
-- Figure out why planners are moving through obstacles and implement a fix. This can be tested by geometric planner.Issue is in propagation size, lowering this should fix it but increase time to solve
+- Figure out why planners are moving through obstacles. Seems to be related to fcl and having an obstacle in the middle?
 - <s> Implement kinodynamic benchmarking. See https://ompl.kavrakilab.org/benchmark.html </s>
 - Can try restricting state space on the planner level in main.cpp
 - <s> Define final environments to use for planning. Can try creating maze like structure. Use simple block and w6 </s>
