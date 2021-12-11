@@ -42,7 +42,7 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
     // stateSpace->registerDefaultProjection(ob::ProjectionEvaluatorPtr(new ob::SubspaceProjectionEvaluator(stateSpace.get(), 0)));
 
     ob::PlannerPtr planner(new og::RRTConnect(ss.getSpaceInformation()));
-    planner->as<og::RRTConnect>()->setRange(0.5);
+    planner->as<og::RRTConnect>()->setRange(0.1);
     ss.setPlanner(planner);
 
     // Complete the setup
