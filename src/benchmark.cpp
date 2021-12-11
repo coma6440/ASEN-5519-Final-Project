@@ -82,7 +82,7 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
     b.addPlanner(ob::PlannerPtr(new oc::EST(ss.getSpaceInformation())));
     // Solve the planning problem
     ot::Benchmark::Request req;
-    req.maxTime = 1.0;
+    req.maxTime = 180.0;
     req.maxMem = 1000.0;
     req.runCount = 10;
     req.displayProgress = true;
