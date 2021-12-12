@@ -1,6 +1,6 @@
 ## TODO
 - <s>Adjust goal in .yaml files to be the true goal</s>
-- Move plotting to MATLAB due to z-ordering issue in python. Can use convhull in MATLAB
+- <s> Move plotting to MATLAB due to z-ordering issue in python. Can use convhull in MATLAB </s>
 - <s>Add goal regions to plots</s>
 - Write psuedocode for informed SST
 - <s> Figure out why planners are moving through obstacles. Seems to be related to fcl and having an obstacle in the middle? Objects are rotated. </s>
@@ -9,6 +9,6 @@
 - <s> Define final environments to use for planning. Can try creating maze like structure. Use simple block and w6 </s>
 - <s> Collect geometric results, used RRTconnect </s>
 - Start overleaf document
-- Collect results for current optimization objective
+- Collect results for current optimization objective. This includes cost
 - Try different optimization objective? Time would be a good one to use since the robot can rotate when stopped.
 - Add check for only updating path if future expected cost is better than current cost
