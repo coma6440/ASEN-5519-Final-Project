@@ -1,5 +1,5 @@
 function make_movie_side(A, env, fname)
-v = VideoWriter(fname);
+v = VideoWriter(fname,'MPEG-4');
 open(v);
 f = figure();
 p = plot3(A(1,1), A(1,2), A(1,3),'k','LineWidth',2);
