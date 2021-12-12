@@ -4,7 +4,7 @@ clear
 clc
 addpath(genpath('../lib/yaml'));
 %% Load in files
-p_type = "geometric";
+p_type = "kinodynamic";
 sol_folder = "../solutions/" + p_type;
 sol_listing = dir(sol_folder);
 sol_listing([sol_listing.isdir]) = [];
@@ -24,5 +24,6 @@ for i = 1:length(sol_listing)
     plot_position(A, dir_name + filesep + "position")
     plot_orientation(A, dir_name + filesep + "orientation")
     plot_trajectory(A, env, dir_name + filesep + "trajectory") 
+    make_movie(A, env, dir_name + filesep + "anim.avi")
 end
 
