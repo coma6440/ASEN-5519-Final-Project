@@ -25,5 +25,7 @@ for i = 1:length(sol_listing)
     plot_orientation(A, dir_name + filesep + "orientation")
     plot_trajectory(A, env, dir_name + filesep + "trajectory") 
     make_movie(A, env, dir_name + filesep + "anim.avi")
+    make_movie_topdown(A, env, dir_name + filesep + "anim_topdown.avi")
+    make_movie_side(A, env, dir_name + filesep + "anim_side.avi")
 end
 
