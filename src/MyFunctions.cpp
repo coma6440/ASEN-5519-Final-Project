@@ -164,7 +164,7 @@ void saveGeometricPath(og::SimpleSetup ss, std::string fname)
 
 void saveControlPath(oc::PathControl path, std::string fname)
     {
-    static char name[50];
+    static char name[60];
     time_t now = time(0);
     std::string s = "../solutions/kinodynamic/" + fname + "_%Y%m%d%H%M%S.txt";
     strftime(name, sizeof(name), s.c_str(), localtime(&now));
@@ -219,35 +219,42 @@ ob::OptimizationObjectivePtr getThresholdPathLengthObj(const ob::SpaceInformatio
     return obj;
     }
 
-unsigned int findPlanTime(std::vector<double> durations, unsigned int n_states, double plan_time, double& actual_time)
+unsigned int findPlanTime(oc::PathControl pathSegment, double plan_time, double& actual_time)
     {
-    for (unsigned int i = 0; i < n_states; i++)
+    actual_time = 0.0;
+    unsigned int i;
+    for (i = 0; i < pathSegment.getStateCount(); i++)
         {
-        actual_time += durations[i];
+        actual_time += pathSegment.getControlDuration(i);
         if (actual_time >= plan_time)
             {
-            return i;
+            break;
             }
         }
-    return n_states - 1;
+    return i;
     }
 
-ob::Cost getSegmentCost(oc::PathControl path, ob::OptimizationObjectivePtr opt, unsigned int start, unsigned int end)
+oc::PathControl getSegment(const ob::SpaceInformationPtr& si, oc::PathControl path, unsigned int start, unsigned int end)
     {
-    og::PathGeometric geo_path = path.asGeometric();
-
-
-    if (end != geo_path.getStateCount())
+    oc::PathControl newPath(si);
+    if (end > path.getStateCount())
         {
-        ob::State* end_state = geo_path.getState(end + 1);
-        geo_path.keepBefore(end_state);
+        std::cout << "Reducing segment size to " << path.getStateCount() - 1 << std::endl;
+        end = path.getStateCount() - 1;
         }
-    if (start != 0)
+    for (unsigned int i = start; i < end; i++)
         {
-        ob::State* start_state = geo_path.getState(start - 1);
-        geo_path.keepAfter(start_state);
+        if (i == start)
+            {
+            newPath.append(path.getState(i));
+            }
+        else
+            {
+            newPath.append(path.getState(i), path.getControl(i - 1), path.getControlDuration(i - 1));
+            }
+
         }
-    return geo_path.cost(opt);
+    return newPath;
     }
 
 void saveCost(std::string fname, unsigned int count, ob::Cost segmentCost, ob::Cost totalCost)

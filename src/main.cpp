@@ -1,5 +1,6 @@
 /* OMPL */
 #include <ompl/control/planners/sst/SST.h>
+#include <ompl/control/planners/rrt/RRT.h>
 // #include "MyPlanner.h"
 
 /* Static Library */
@@ -63,14 +64,15 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
     ss.setStatePropagator(oc::ODESolver::getStatePropagator(odeSolver, &PostIntegration));
 
     // Set the planner
-    // ob::PlannerPtr planner(new oc::SST(ss.getSpaceInformation()));
-    // ss.setPlanner(planner);
+    ob::PlannerPtr planner(new oc::RRT(ss.getSpaceInformation()));
+    ss.setPlanner(planner);
 
     // Planner optimization objectives
-    ss.setOptimizationObjective(getThresholdPathLengthObj(ss.getSpaceInformation()));
+    ob::OptimizationObjectivePtr opt = getThresholdPathLengthObj(ss.getSpaceInformation());
+    ss.setOptimizationObjective(opt);
 
     // Planner termination conditions
-    ob::PlannerTerminationCondition ptc_time = ob::timedPlannerTerminationCondition(120);
+    ob::PlannerTerminationCondition ptc_time = ob::timedPlannerTerminationCondition(60);
     ob::PlannerTerminationCondition ptc_sol = ob::CostConvergenceTerminationCondition(ss.getProblemDefinition(), 1, 1);
     ob::PlannerTerminationCondition ptc = ob::plannerOrTerminationCondition(ptc_time, ptc_sol);
 
@@ -79,90 +81,80 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
     // Solve the planning problem
     ob::PlannerStatus solved = ss.solve(ptc);
 
-    unsigned int idx = 1;
+
     if (ss.haveExactSolutionPath())
         {
-        oc::PathControl path = ss.getSolutionPath();
-        path.interpolate();
-
-        std::vector<double> durations = path.getControlDurations();
-        ob::OptimizationObjectivePtr opt = getThresholdPathLengthObj(ss.getSpaceInformation());
-        ob::Cost initialCost = path.asGeometric().cost(opt);
-        unsigned int n_states = durations.size();
-        double initialDuration = path.length();
-        std::cout << "Initial Path: n = " << n_states << ", t = " << initialDuration << ", c = " << initialCost.value() << std::endl;
+        unsigned int idx = 1;
+        oc::PathControl initialPath = ss.getSolutionPath();
+        initialPath.interpolate();
+        double initialCost = initialPath.asGeometric().cost(opt).value();
+        std::cout << "Initial Path: n = " << initialPath.getStateCount() << ", t = " << initialPath.length() << ", c = " << initialCost << std::endl;
 
         // Set an optimizing planner
         ob::PlannerPtr planner(new oc::SST(ss.getSpaceInformation()));
         ss.setPlanner(planner);
 
         // Initialize some variables used in the loop
-        ob::State* st = path.getState(0);
-        double dt = 10.0;
+        ob::State* st = initialPath.getState(0);
+        double dt = 20.0;
         double actual_time = 0.0;
         double accum_time = 0.0;
         double planTime = 0.0;
         unsigned int count = 0;
-        unsigned int prevIdx = 0;
+        double finalCost = 0.0;
 
         // Get first path segment
-        unsigned int idx = findPlanTime(durations, n_states, actual_time + dt, actual_time);
-        planTime = actual_time - accum_time;
+        idx = findPlanTime(initialPath, dt, actual_time);
+        planTime = actual_time;
         accum_time += actual_time;
-        ob::Cost segmentCost = getSegmentCost(path, opt, 0, idx);
+        oc::PathControl currentSegment = getSegment(ss.getSpaceInformation(), initialPath, 0, idx);
+        oc::PathControl remainingSegment = getSegment(ss.getSpaceInformation(), initialPath, idx, initialPath.getStateCount());
+        ob::Cost segmentCost = currentSegment.asGeometric().cost(opt);
         // Save results of initial path
-        saveControlPath(path, ws);
-        saveCost("/solutions/kinodynamic/cost.txt", count, segmentCost, initialCost);
-
-        // Define new start state
-        st = path.getState(idx);
-
-        while (!goal.isSatisfied(st))
+        saveControlPath(initialPath, ws + "_init");
+        // saveCost("/solutions/kinodynamic/cost.txt", count, segmentCost, initialCost);
+        finalCost += currentSegment.asGeometric().cost(opt).value();
+        saveControlPath(currentSegment, ws + "_" + std::to_string(count));
+        while (remainingSegment.getStateCount() > 0)
             {
             count++;
-            // std::cout << "Using idx " << idx << " gives planning time of " << planTime << std::endl;
-            // Copy and display new starting state
+            st = remainingSegment.getState(0);
             si->copyState(start->as<ob::CompoundStateSpace::StateType>(), st);
 
             // Change the start state
             ss.getProblemDefinition()->clearStartStates();
             ss.setStartState(start);
+            // Clear solutions and define new planner
             ss.getProblemDefinition()->clearSolutionPaths();
-            // oc::PathControl newSolnPath = makePath(si, path, idx, n_states);
-            // newSolnPath.print(std::cout);
-            // ss.getProblemDefinition()->addSolutionPath(path);
             ob::PlannerTerminationCondition ptc_time = ob::timedPlannerTerminationCondition(planTime);
             ss.getPlanner().get()->clear();
-            prevIdx = idx;
+            // Solve new planner
             solved = ss.solve(ptc_time);
             if (solved && ss.haveExactSolutionPath())
                 {
                 // TODO: Find out why this is sometimes repeating endlessly
-                path = ss.getSolutionPath();
-                path.interpolate();
-                std::cout << "Found optimization" << std::endl;
-                saveControlPath(path, ws);
-                accum_time = 0.0;
-                durations = path.getControlDurations();
-                segmentCost = path.asGeometric().cost(getThresholdPathLengthObj(ss.getSpaceInformation()));
-                n_states = durations.size();
-                //std::cout << "n states remaining = " << n_states << std::endl;
-                prevIdx = 0;
+                ob::Cost currentRemainingCost = remainingSegment.asGeometric().cost(opt);
+                ob::Cost futureCost = ss.getSolutionPath().asGeometric().cost(opt);
+                if (futureCost.value() < currentRemainingCost.value())
+                    {
+                    std::cout << "Found optimization from " << currentRemainingCost.value() << " to " << futureCost.value() << std::endl;
+                    remainingSegment = ss.getSolutionPath();
+                    remainingSegment.interpolate();
+                    }
+
                 }
-
-            actual_time = 0.0;
-            // Get first path segment
-            idx = findPlanTime(durations, n_states, accum_time + dt, actual_time);
-            planTime = actual_time - accum_time;
+            idx = findPlanTime(remainingSegment, dt, actual_time);
+            planTime = actual_time;
             accum_time += actual_time;
-            // std::cout << "Act: " << actual_time << ", P: " << planTime << ", Acc: " << accum_time << std::endl;
-
-            ob::Cost segmentCost = getSegmentCost(path, opt, prevIdx, idx);
-            saveCost("/solutions/kinodynamic/cost.txt", count, segmentCost, path.asGeometric().cost(opt));
-
-            // Define new start state
-            st = path.getState(idx);
+            // Get next path segment
+            std::cout << "Plan time = " << planTime << ", idx = " << idx << ", n = " << remainingSegment.getStateCount() << std::endl;
+            currentSegment = getSegment(ss.getSpaceInformation(), remainingSegment, 0, idx);
+            saveControlPath(currentSegment, ws + "_" + std::to_string(count));
+            remainingSegment = getSegment(ss.getSpaceInformation(), remainingSegment, idx, remainingSegment.getStateCount());
+            finalCost += currentSegment.asGeometric().cost(opt).value();
+            std::cout << "Remaining states: " << remainingSegment.getStateCount() << std::endl;
             }
+        std::cout << "Initial cost = " << initialCost << ", Final cost = " << finalCost << std::endl;
         }
     }
 

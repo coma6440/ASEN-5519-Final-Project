@@ -55,8 +55,8 @@ void PostIntegration(const ob::State* /*state*/, const oc::Control* /*control*/,
 
 ob::OptimizationObjectivePtr getThresholdPathLengthObj(const ob::SpaceInformationPtr& si);
 
-unsigned int findPlanTime(std::vector<double> durations, unsigned int n_states, double plan_time, double& actual_time);
+unsigned int findPlanTime(oc::PathControl pathSegment, double plan_time, double& actual_time);
 
-ob::Cost getSegmentCost(oc::PathControl path, ob::OptimizationObjectivePtr opt, unsigned int start, unsigned int end);
+oc::PathControl getSegment(const ob::SpaceInformationPtr& si, oc::PathControl path, unsigned int start, unsigned int end);
 
 void saveCost(std::string fname, unsigned int count, ob::Cost segmentCost, ob::Cost totalCost);
