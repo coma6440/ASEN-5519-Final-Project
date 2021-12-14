@@ -114,8 +114,8 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
         oc::PathControl remainingSegment = getSegment(ss.getSpaceInformation(), initialPath, idx, initialPath.getStateCount());
         // Save results of initial path
         saveControlPath(initialPath, ws + "_init");
+        saveControlPath(currentSegment, ws + "_c_" + std::to_string(count));
         finalCost += currentSegment.asGeometric().cost(opt).value();
-        saveControlPath(currentSegment, ws + "_" + std::to_string(count));
         segment_costs.push_back(currentSegment.asGeometric().cost(opt).value());
 
 
@@ -137,7 +137,6 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
             solved = ss.solve(ptc_time);
             if (solved && ss.haveExactSolutionPath())
                 {
-                // TODO: Find out why this is sometimes repeating endlessly
                 ob::Cost currentRemainingCost = remainingSegment.asGeometric().cost(opt);
                 ob::Cost futureCost = ss.getSolutionPath().asGeometric().cost(opt);
                 if (futureCost.value() < currentRemainingCost.value())
@@ -146,8 +145,8 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
                     remainingSegment = ss.getSolutionPath();
                     remainingSegment.interpolate();
                     }
-
                 }
+            saveControlPath(remainingSegment, ws + "_r_" + std::to_string(count));
             final_costs.push_back(remainingSegment.asGeometric().cost(opt).value());
             idx = findPlanTime(remainingSegment, dt, actual_time);
             planTime = actual_time;
@@ -155,7 +154,7 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
             // Get next path segment
             std::cout << "Plan time = " << planTime << ", idx = " << idx << ", n = " << remainingSegment.getStateCount() << std::endl;
             currentSegment = getSegment(ss.getSpaceInformation(), remainingSegment, 0, idx + 1);
-            saveControlPath(currentSegment, ws + "_" + std::to_string(count));
+            saveControlPath(currentSegment, ws + "_c_" + std::to_string(count));
             remainingSegment = getSegment(ss.getSpaceInformation(), remainingSegment, idx, remainingSegment.getStateCount());
             finalCost += currentSegment.asGeometric().cost(opt).value();
             segment_costs.push_back(currentSegment.asGeometric().cost(opt).value());
