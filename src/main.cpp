@@ -125,7 +125,6 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
             init_costs.push_back(remainingSegment.asGeometric().cost(opt).value());
             st = remainingSegment.getState(0);
             si->copyState(start->as<ob::CompoundStateSpace::StateType>(), st);
-            start.print(std::cout);
             // Change the start state
             ss.getProblemDefinition()->clearStartStates();
             ss.setStartState(start);
