@@ -4,8 +4,8 @@ clear
 clc
 addpath(genpath('../lib/yaml'));
 %% Load in files
-sol_folder = "../solutions/online/w2_1";
-env_name = 'w2';
+env_name = 'w3';
+sol_folder = "../solutions/online/" + env_name + "_1";
 sol_listing = dir(sol_folder);
 sol_listing([sol_listing.isdir]) = [];
 env = ReadYaml(['../configs/', env_name ,'.yaml']);
