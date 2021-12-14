@@ -59,4 +59,4 @@ unsigned int findPlanTime(oc::PathControl pathSegment, double plan_time, double&
 
 oc::PathControl getSegment(const ob::SpaceInformationPtr& si, oc::PathControl path, unsigned int start, unsigned int end);
 
-void saveCost(std::string fname, unsigned int count, ob::Cost segmentCost, ob::Cost totalCost);
+void saveCost(std::string dir, std::vector<double> segmentCosts, std::vector<double> initCosts, std::vector<double> finalCosts);

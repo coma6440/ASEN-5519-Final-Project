@@ -102,25 +102,30 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
         double planTime = 0.0;
         unsigned int count = 0;
         double finalCost = 0.0;
+        std::vector<double> init_costs;
+        std::vector<double> final_costs;
+        std::vector<double> segment_costs;
 
         // Get first path segment
         idx = findPlanTime(initialPath, dt, actual_time);
         planTime = actual_time;
         accum_time += actual_time;
-        oc::PathControl currentSegment = getSegment(ss.getSpaceInformation(), initialPath, 0, idx);
+        oc::PathControl currentSegment = getSegment(ss.getSpaceInformation(), initialPath, 0, idx + 1);
         oc::PathControl remainingSegment = getSegment(ss.getSpaceInformation(), initialPath, idx, initialPath.getStateCount());
-        ob::Cost segmentCost = currentSegment.asGeometric().cost(opt);
         // Save results of initial path
         saveControlPath(initialPath, ws + "_init");
-        // saveCost("/solutions/kinodynamic/cost.txt", count, segmentCost, initialCost);
         finalCost += currentSegment.asGeometric().cost(opt).value();
         saveControlPath(currentSegment, ws + "_" + std::to_string(count));
+        segment_costs.push_back(currentSegment.asGeometric().cost(opt).value());
+
+
         while (remainingSegment.getStateCount() > 0)
             {
             count++;
+            init_costs.push_back(remainingSegment.asGeometric().cost(opt).value());
             st = remainingSegment.getState(0);
             si->copyState(start->as<ob::CompoundStateSpace::StateType>(), st);
-
+            start.print(std::cout);
             // Change the start state
             ss.getProblemDefinition()->clearStartStates();
             ss.setStartState(start);
@@ -143,17 +148,20 @@ void planWithSimpleSetup(std::vector<std::shared_ptr<fcl::CollisionObjectf>> obs
                     }
 
                 }
+            final_costs.push_back(remainingSegment.asGeometric().cost(opt).value());
             idx = findPlanTime(remainingSegment, dt, actual_time);
             planTime = actual_time;
             accum_time += actual_time;
             // Get next path segment
             std::cout << "Plan time = " << planTime << ", idx = " << idx << ", n = " << remainingSegment.getStateCount() << std::endl;
-            currentSegment = getSegment(ss.getSpaceInformation(), remainingSegment, 0, idx);
+            currentSegment = getSegment(ss.getSpaceInformation(), remainingSegment, 0, idx + 1);
             saveControlPath(currentSegment, ws + "_" + std::to_string(count));
             remainingSegment = getSegment(ss.getSpaceInformation(), remainingSegment, idx, remainingSegment.getStateCount());
             finalCost += currentSegment.asGeometric().cost(opt).value();
+            segment_costs.push_back(currentSegment.asGeometric().cost(opt).value());
             std::cout << "Remaining states: " << remainingSegment.getStateCount() << std::endl;
             }
+        saveCost("../solutions/", segment_costs, init_costs, final_costs);
         std::cout << "Initial cost = " << initialCost << ", Final cost = " << finalCost << std::endl;
         }
     }

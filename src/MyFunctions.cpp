@@ -174,6 +174,7 @@ void saveControlPath(oc::PathControl path, std::string fname)
     file.close();
     }
 
+
 oc::PathControl makePath(const ob::SpaceInformationPtr& si, oc::PathControl prevPath, const unsigned int start, const unsigned int end)
     {
     oc::PathControl path(si);
@@ -257,9 +258,18 @@ oc::PathControl getSegment(const ob::SpaceInformationPtr& si, oc::PathControl pa
     return newPath;
     }
 
-void saveCost(std::string fname, unsigned int count, ob::Cost segmentCost, ob::Cost totalCost)
+void saveCost(std::string dir, std::vector<double> segmentCosts, std::vector<double> initCosts, std::vector<double> finalCosts)
     {
-    std::ofstream file(fname);
-    std::cout << count << ": segment = " << segmentCost.value() << ", total = " << totalCost.value() << std::endl;
-    file.close();
+    std::ofstream file1(dir + "segment_costs.txt");
+    for (unsigned int i = 0; i < segmentCosts.size(); i++)
+        {
+        file1 << i << "," << segmentCosts[i] << std::endl;
+        }
+    file1.close();
+    std::ofstream file2(dir + "opt_costs.txt");
+    for (unsigned int i = 0; i < initCosts.size(); i++)
+        {
+        file2 << i << "," << initCosts[i] << "," << finalCosts[i] << std::endl;
+        }
+    file2.close();
     }
