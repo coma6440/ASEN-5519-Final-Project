@@ -191,7 +191,7 @@ void DynamicsODE(const oc::ODESolver::StateType& x, const oc::Control* control, 
     const Eigen::Quaternionf orientation(x[6], x[3], x[4], x[5]);
     const Eigen::Quaternionf ang_vel(0, u[1], u[2], u[3]);
     const Eigen::Vector3f body_velocity(x[7], 0, 0);
-    const Eigen::Vector3f vel = orientation * body_velocity;
+    const Eigen::Vector3f vel = orientation * body_velocity; // This returns the same value as q*v*q'
     const Eigen::Quaternionf qdot = ang_vel * orientation;
     // Zero out qdot
     xdot.resize(x.size(), 0);
