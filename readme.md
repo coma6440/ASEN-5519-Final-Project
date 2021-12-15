@@ -4,6 +4,27 @@
 - Need to install fcl https://github.com/flexible-collision-library/fcl
 - Need to install yaml-cpp https://github.com/jbeder/yaml-cpp
 
+# Running the programs
+After cloning the repo, the programs can be built using the following commands under Linux
+```
+mkdir build
+cd build
+cmake ..
+make
+```
+
+Then, the various programs can be run by:
+```
+./geometric w1.yaml
+./kinodynamic w2.yaml
+./benchmark w1.yaml
+./main w3.yaml
+```
+
+Where the parameter passed as input is the environment configuration file located in the configs directory. The geometric program will run an instance of geometric planning and output results to solutions/geometric. The kinodynamic program will run an instance of control-based planning and output results to solutions/kinodynamic. The benchmark program will run benchmarking of the four control-based planners and output a .log file to the build directory. This .log file can then be converted into a database for upload to Planner Arena using the ompl_benchmark_statistics.py scrip located in the report directory. The main program will run an instance of online-optimization, control-based planning and output results to solutions/kinodynamic. The results provided in the report for online optimization have been moved to the online subdirectory for convenience. 
+
+Visualization is done using plotting.m and online_plotting.m in the visualization directory. These scripts have configurable parameters that point to the solution directory and output the resulting plots/animations. 
+
 # Results
 ## Geometric Planning
 ### Environment 1
